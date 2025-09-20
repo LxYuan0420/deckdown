@@ -8,14 +8,13 @@ from typing import Any
 
 def _require_python_pptx() -> tuple[Any, Any, Any, Any]:
     try:
-        from pptx import Presentation  # type: ignore
-        from pptx.chart.data import CategoryChartData  # type: ignore
-        from pptx.enum.chart import XL_CHART_TYPE  # type: ignore
-        from pptx.util import Inches  # type: ignore
+        from pptx import Presentation
+        from pptx.chart.data import CategoryChartData
+        from pptx.enum.chart import XL_CHART_TYPE
+        from pptx.util import Inches
     except Exception as exc:  # pragma: no cover - exercised manually
         print(
-            "Missing dependency: python-pptx. Install with:\n"
-            "  uv pip install python-pptx\n",
+            "Missing dependency: python-pptx. Install with:\n  uv pip install python-pptx\n",
             file=sys.stderr,
         )
         raise SystemExit(2) from exc
