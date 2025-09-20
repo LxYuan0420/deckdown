@@ -30,3 +30,18 @@ def test_cli_missing_input_returns_error(tmp_path: Path) -> None:
     missing = tmp_path / "missing.pptx"
     code = main(["extract", str(missing)])
     assert code == EXIT_INPUT_ERROR
+
+
+def test_cli_input_directory_is_error(tmp_path: Path) -> None:
+    code = main(["extract", str(tmp_path)])
+    assert code == EXIT_INPUT_ERROR
+
+
+def test_cli_md_out_directory(tmp_path: Path) -> None:
+    pptx = tmp_path / "deck.pptx"
+    pptx.write_bytes(b"")
+    outdir = tmp_path / "out"
+    code = main(["extract", str(pptx), "--md-out", str(outdir)])
+    assert code == EXIT_OK
+    expected = outdir / "deck.md"
+    assert expected.exists()

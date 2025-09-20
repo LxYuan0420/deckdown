@@ -15,15 +15,34 @@ EXIT_INPUT_ERROR = 3
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="deckdown", add_help=True)
+    parser = argparse.ArgumentParser(
+        prog="deckdown",
+        add_help=True,
+        description="Extract PPTX decks to Markdown (MVP).",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_extract = sub.add_parser("extract", help="Extract deck to Markdown")
-    p_extract.add_argument("input", help="Path to input .pptx file")
+    p_extract = sub.add_parser(
+        "extract",
+        help="Extract deck to Markdown",
+        description="Extract a .pptx deck and write Markdown output.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  deckdown extract deck.pptx\n"
+            "  deckdown extract deck.pptx --md-out out.md\n"
+            "  deckdown extract deck.pptx --md-out out_dir/\n"
+        ),
+    )
+    p_extract.add_argument("input", metavar="INPUT.pptx", help="Path to input .pptx file")
     p_extract.add_argument(
         "--md-out",
         dest="md_out",
-        help="Path to write Markdown (default: <basename>.md)",
+        metavar="PATH_OR_DIR",
+        help=(
+            "Output path or directory. If a directory, writes <basename>.md inside.\n"
+            "Default: alongside input as <basename>.md"
+        ),
         default=None,
     )
     p_extract.add_argument(
@@ -41,18 +60,42 @@ def _default_md_out(input_path: Path) -> Path:
     return input_path.with_name(f"{name}.md")
 
 
+def _resolve_md_out(in_path: Path, md_out_opt: str | None) -> Path:
+    if md_out_opt is None:
+        return _default_md_out(in_path)
+    dest = Path(md_out_opt)
+    if dest.exists() and dest.is_dir():
+        return dest / _default_md_out(in_path).name
+    # If it looks like a directory path ending with a separator, treat as directory
+    as_str = str(dest)
+    if as_str.endswith("/") or as_str.endswith("\\"):
+        d = Path(as_str.rstrip("/\\"))
+        return d / _default_md_out(in_path).name
+    # Heuristic: if destination does not exist and lacks .md extension, treat as directory
+    if not dest.exists() and dest.suffix.lower() != ".md":
+        return dest / _default_md_out(in_path).name
+    return dest
+
+
 def _cmd_extract(args: argparse.Namespace) -> int:
     in_path = Path(args.input)
-    if not in_path.is_file():
+    if not in_path.exists():
         print(f"error: input not found: {in_path}", file=sys.stderr)
         return EXIT_INPUT_ERROR
+    if in_path.is_dir():
+        print(
+            f"error: input is a directory, expected a .pptx file: {in_path}",
+            file=sys.stderr,
+        )
+        return EXIT_INPUT_ERROR
 
-    md_out = Path(args.md_out) if args.md_out else _default_md_out(in_path)
+    md_out = _resolve_md_out(in_path, args.md_out)
 
     # Placeholder: construct an empty Deck; extractors will populate later.
     deck = Deck(file=str(in_path), title=None, slides=())
     md = MarkdownRenderer().render(deck)
 
+    md_out.parent.mkdir(parents=True, exist_ok=True)
     md_out.write_text(md, encoding="utf-8")
     return EXIT_OK
 

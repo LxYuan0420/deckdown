@@ -8,7 +8,7 @@ Usage
   - Generate all: `make generate-samples`
   - Or subset: `uv run python scripts/generate_samples.py --only text_basic tables_basic`
 - Run the CLI on a sample, writing output alongside the input:
-  - `uv run python -m deckdown.cli extract data/samples/text_basic/text_basic.pptx`
+  - `uv run deckdown extract data/samples/text_basic/text_basic.pptx`
 - Compare the produced `<basename>.md` with the `expected.md` sketch for that scenario.
 
 Scenarios
