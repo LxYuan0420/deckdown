@@ -29,9 +29,9 @@ build/
 dist/
 *.egg-info/
 
-# Legacy module path (kept untracked)
-src/pptx2md/
-
 # Misc caches
 .cache/
 
+# Ignore root-level Markdown files (docs) except README.md
+/*.md
+!/README.md
