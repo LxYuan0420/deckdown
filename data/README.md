@@ -3,7 +3,10 @@
 This folder contains sample scenarios and guidance for creating small PPTX decks to exercise DeckDown features. Binary assets (e.g., `.pptx`) are git-ignored here to keep the repo lean; only documentation and expectations are tracked.
 
 Usage
-- Place your `.pptx` files under the matching `data/samples/<scenario>/` subfolder.
+- Auto-generate sample decks (requires python-pptx):
+  - Install: `uv pip install python-pptx`
+  - Generate all: `make generate-samples`
+  - Or subset: `uv run python scripts/generate_samples.py --only text_basic tables_basic`
 - Run the CLI on a sample, writing output alongside the input:
   - `uv run python -m deckdown.cli extract data/samples/text_basic/text_basic.pptx`
 - Compare the produced `<basename>.md` with the `expected.md` sketch for that scenario.
