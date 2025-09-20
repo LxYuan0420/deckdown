@@ -6,11 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+deckdown = "deckdown.cli:main"
+
 [dependency-groups]
 dev = [
     "mypy>=1.18.2",
     "pytest-cov>=7.0.0",
     "pytest>=8.4.2",
+    "python-pptx>=1.0.2",
     "ruff>=0.13.1",
 ]
 
@@ -60,3 +64,10 @@ files = ["src", "tests"]
 addopts = "-q"
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
