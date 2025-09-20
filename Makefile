@@ -1,24 +1,22 @@
-## Convenience tasks (no global installs; uses uv)
+## Convenience tasks (uv-managed env; no global installs)
 
-.PHONY: help lint fmt fmt-check lint-fix fix typecheck test coverage coverage-xml coverage-html clean dev-symlink dev-symlink-clean generate-samples all
+.PHONY: all help \
+		fmt fmt-check lint lint-fix fix \
+		typecheck test coverage coverage-xml coverage-html \
+		generate-samples \
+		install-cli \
+		clean
 
-help:
-	@echo "Available targets:"
-	@echo "  fmt            - Apply ruff formatting"
-	@echo "  fmt-check      - Check formatting only (no changes)"
-	@echo "  lint           - Run ruff checks"
-	@echo "  lint-fix       - Run ruff with --fix (auto-fixable rules)"
-	@echo "  fix            - Auto-fix (lint-fix) then format"
-	@echo "  typecheck      - Run mypy on the repo"
-	@echo "  test           - Run pytest"
-	@echo "  coverage       - Run pytest with coverage (term-missing)"
-	@echo "  coverage-xml   - Generate coverage.xml (CI integrations)"
-	@echo "  coverage-html  - Generate HTML coverage report in htmlcov/"
-	@echo "  clean          - Remove caches and coverage artifacts"
-	@echo "  dev-symlink    - Create deckdown -> src/deckdown symlink for editor jumps"
-	@echo "  dev-symlink-clean - Remove the symlink if present"
-	@echo "  generate-samples - Generate PPTX samples into data/samples (requires python-pptx)"
-	@echo "  all            - fmt, lint, typecheck, test"
+# === Install & CLI ===
+install-cli:
+	uv pip install -e .
+
+# === Dev: Format & Lint ===
+fmt:
+	uv run ruff format .
+
+fmt-check:
+	uv run ruff format --check .
 
 lint:
 	uv run ruff check .
@@ -26,21 +24,15 @@ lint:
 lint-fix:
 	uv run ruff check . --fix
 
-fmt:
-	uv run ruff format .
-
-fmt-check:
-	uv run ruff format --check .
-
 fix: lint-fix fmt
 
+# === Dev: Type & Test ===
 typecheck:
 	uv run mypy .
 
 test:
 	uv run pytest
 
-# Coverage requires pytest-cov to be installed in the env.
 coverage:
 	uv run pytest --cov=deckdown --cov-report=term-missing:skip-covered
 
@@ -50,22 +42,41 @@ coverage-xml:
 coverage-html:
 	uv run pytest --cov=deckdown --cov-report=html
 
+# === Dev: Data & Samples ===
+generate-samples:
+	uv run python scripts/generate_samples.py --out data/samples
+
+# === Clean ===
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache .coverage* htmlcov coverage.xml
 
-dev-symlink:
-	@if [ -L deckdown ]; then \
-		echo "Symlink 'deckdown' already exists"; \
-	elif [ -e deckdown ]; then \
-		echo "Path 'deckdown' exists and is not a symlink. Refusing."; exit 1; \
-	else \
-		ln -s src/deckdown deckdown && echo "Created symlink deckdown -> src/deckdown"; \
-	fi
-
-dev-symlink-clean:
-	@if [ -L deckdown ]; then rm deckdown && echo "Removed symlink 'deckdown'"; else echo "No 'deckdown' symlink to remove"; fi
-
+# === Meta ===
 all: fmt lint typecheck test
 
-generate-samples:
-	uv run python scripts/generate_samples.py --out data/samples
+help:
+	@echo "Install & CLI:"
+	@echo "  install-cli     - Install this project in editable mode"
+	@echo
+	@echo "Dev: Format & Lint:"
+	@echo "  fmt             - Apply ruff formatting"
+	@echo "  fmt-check       - Check formatting only"
+	@echo "  lint            - Run ruff checks"
+	@echo "  lint-fix        - Auto-fix fixable lint issues"
+	@echo "  fix             - lint-fix then fmt"
+	@echo
+	@echo "Dev: Type & Test:"
+	@echo "  typecheck       - Run mypy"
+	@echo "  test            - Run pytest"
+	@echo "  coverage        - Run pytest with coverage (term-missing)"
+	@echo "  coverage-xml    - Generate coverage.xml"
+	@echo "  coverage-html   - Generate HTML coverage report"
+	@echo
+	@echo "Dev: Data & Samples:"
+	@echo "  generate-samples - Generate PPTX samples into data/samples"
+	@echo
+	@echo "Clean & Meta:"
+	@echo "  clean           - Remove caches and coverage artifacts"
+	@echo "  all             - fmt, lint, typecheck, test"
+
+install-cli:
+	uv pip install -e .
