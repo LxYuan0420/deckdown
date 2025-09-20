@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
+.coverage*
+htmlcov/
+coverage.xml
+
+# Editors/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local Python version pin (managed locally)
+.python-version
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Legacy module path (kept untracked)
+src/pptx2md/
+
+# Misc caches
+.cache/
+
