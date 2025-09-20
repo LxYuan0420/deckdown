@@ -8,8 +8,6 @@
 		clean
 
 # === Install & CLI ===
-install-cli:
-	uv pip install -e .
 
 # === Dev: Format & Lint ===
 fmt:
