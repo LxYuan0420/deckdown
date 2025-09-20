@@ -1,6 +1,6 @@
 ## Convenience tasks (no global installs; uses uv)
 
-.PHONY: help lint fmt fmt-check lint-fix fix typecheck test coverage coverage-xml coverage-html clean dev-symlink dev-symlink-clean all
+.PHONY: help lint fmt fmt-check lint-fix fix typecheck test coverage coverage-xml coverage-html clean dev-symlink dev-symlink-clean generate-samples all
 
 help:
 	@echo "Available targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  clean          - Remove caches and coverage artifacts"
 	@echo "  dev-symlink    - Create deckdown -> src/deckdown symlink for editor jumps"
 	@echo "  dev-symlink-clean - Remove the symlink if present"
+	@echo "  generate-samples - Generate PPTX samples into data/samples (requires python-pptx)"
 	@echo "  all            - fmt, lint, typecheck, test"
 
 lint:
@@ -65,3 +66,6 @@ dev-symlink-clean:
 	@if [ -L deckdown ]; then rm deckdown && echo "Removed symlink 'deckdown'"; else echo "No 'deckdown' symlink to remove"; fi
 
 all: fmt lint typecheck test
+
+generate-samples:
+	uv run python scripts/generate_samples.py --out data/samples
