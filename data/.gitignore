@@ -1,0 +1,20 @@
+# Ignore binary/sample assets in this folder; keep docs.
+*.pptx
+*.ppt
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.zip
+*.gz
+*.tar
+*.tar.gz
+
+!.gitignore
+!README.md
+!samples/**/README.md
+!samples/**/expected.md
