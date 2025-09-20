@@ -9,4 +9,3 @@ __all__ = [
     "Redactor",
     "redact_text",
 ]
-

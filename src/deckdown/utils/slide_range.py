@@ -6,12 +6,6 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class SlideRange:
-    """Immutable, normalized slide range.
-
-    - Stores unique, sorted 1-based slide indices.
-    - Provides membership testing and list/tuple views.
-    """
-
     items: tuple[int, ...]
 
     def __post_init__(self) -> None:
@@ -28,51 +22,25 @@ class SlideRange:
         return len(self.items)
 
     def contains(self, index: int) -> bool:
-        """Return True if `index` is included in this range.
-
-        Preconditions: index >= 1
-        """
         if index <= 0:
             raise ValueError("index must be positive (1-based)")
         # Binary search could be used; linear is fine for small ranges
         return index in self.items
 
     def as_list(self) -> list[int]:
-        """Return indices as a list copy."""
         return list(self.items)
 
     @classmethod
     def from_iterable(cls, indices: Iterable[int]) -> SlideRange:
-        """Create a SlideRange from an iterable of indices.
-
-        - Deduplicates, filters non-positive, and sorts ascending.
-        - Raises ValueError if any index is non-positive.
-        """
         normalized = _normalize_indices(indices)
         return cls(items=tuple(normalized))
 
     @classmethod
     def parse(cls, spec: str) -> SlideRange:
-        """Parse a slide range specifier like "1-5,9" into a SlideRange.
-
-        Grammar:
-        - spec := item ("," item)*
-        - item := INT | INT "-" INT  (inclusive)
-
-        Rules:
-        - Indices are 1-based and must be positive.
-        - Ranges must have start <= end.
-        - Duplicates are removed; result is sorted.
-        - Whitespace is ignored around items.
-        """
         return cls.from_iterable(_parse_spec(spec))
 
 
 def parse_slide_range(spec: str) -> list[int]:
-    """Parse `spec` and return a sorted list of unique 1-based indices.
-
-    Convenience functional wrapper over SlideRange.parse().
-    """
     return SlideRange.parse(spec).as_list()
 
 
@@ -123,4 +91,3 @@ def _parse_int(s: str) -> int:
     if value <= 0:
         raise ValueError("Indices must be positive (1-based)")
     return value
-
