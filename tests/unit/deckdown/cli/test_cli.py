@@ -1,0 +1,32 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from deckdown.cli import EXIT_INPUT_ERROR, EXIT_OK, main
+
+
+def test_cli_extract_writes_markdown(tmp_path: Path) -> None:
+    pptx = tmp_path / "sample.pptx"
+    pptx.write_bytes(b"")
+    out = tmp_path / "out.md"
+
+    code = main(["extract", str(pptx), "--md-out", str(out)])
+    assert code == EXIT_OK
+    text = out.read_text(encoding="utf-8")
+    assert text.startswith("# sample\n")
+
+
+def test_cli_extract_default_output_name(tmp_path: Path) -> None:
+    pptx = tmp_path / "Deck Name.PPTX"  # ensure case-insensitivity
+    pptx.write_bytes(b"")
+
+    code = main(["extract", str(pptx)])
+    assert code == EXIT_OK
+    out = tmp_path / "Deck Name.md"
+    assert out.exists()
+
+
+def test_cli_missing_input_returns_error(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.pptx"
+    code = main(["extract", str(missing)])
+    assert code == EXIT_INPUT_ERROR
