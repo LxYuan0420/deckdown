@@ -14,8 +14,8 @@ class MarkdownRenderer:
 
     def render(self, deck: Deck) -> str:
         lines: list[str] = []
-        title = deck.title or self._basename(deck.file) or "Untitled Deck"
-        lines.append(f"# {title}")
+        heading = self._basename(deck.file) or deck.title or "Untitled Deck"
+        lines.append(f"# {heading}")
         lines.append("")
 
         for slide in deck.slides:

@@ -21,7 +21,7 @@ def test_render_markdown_basic() -> None:
 
     md = MarkdownRenderer().render(deck)
     expected = (
-        "# Sample\n\n"
+        "# sample\n\n"
         "## Slide 1 — Intro\n\n"
         "### Text\n"
         "Alpha\n"
@@ -43,7 +43,7 @@ def test_markdown_renderer_class() -> None:
     deck = Deck(file="sample.pptx", title="Sample", slides=(slide,))
     renderer = MarkdownRenderer()
     out = renderer.render(deck)
-    assert out.startswith("# Sample\n\n## Slide 1 — Intro\n")
+    assert out.startswith("# sample\n\n## Slide 1 — Intro\n")
 
 
 def test_renderer_tables_empty_and_ragged_and_title_fallback() -> None:
