@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from deckdown.extractors.text import extract_deck_text
+from deckdown.extractors.text import TextExtractor
+from deckdown.loader import Loader
 from deckdown.renderers.markdown import MarkdownRenderer
 
 
 def _make_text_basic(tmp: Path) -> Path:
-    # Generate a tiny deck similar to data/samples/text_basic
     from pptx import Presentation
 
     out = tmp / "t.pptx"
@@ -48,12 +48,13 @@ def _make_text_basic(tmp: Path) -> Path:
     return out
 
 
-def test_extract_deck_text_basic(tmp_path: Path) -> None:
+def test_text_extractor_basic(tmp_path: Path) -> None:
     pptx = _make_text_basic(tmp_path)
-    deck = extract_deck_text(str(pptx))
+    prs = Loader(str(pptx)).presentation()
+    deck = TextExtractor().extract_deck(prs, source_path=str(pptx))
     md = MarkdownRenderer().render(deck)
     expected = (
-        "# Intro\n\n"
+        "# t\n\n"
         "## Slide 1 — Intro\n\n"
         "### Text\n"
         "Welcome to DeckDown\n"
@@ -70,4 +71,3 @@ def test_extract_deck_text_basic(tmp_path: Path) -> None:
         "Closing\n"
     )
     assert md == expected
-
