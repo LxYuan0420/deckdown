@@ -68,15 +68,15 @@ def _cmd_extract(args: argparse.Namespace) -> int:
         )
         return EXIT_INPUT_ERROR
 
-    om = OutputManager()
-    md_out = om.resolve_md_out(in_path, args.md_out)
+    output = OutputManager()
+    output_path = output.resolve_markdown_output_path(in_path, args.md_out)
 
     prs = Loader(str(in_path)).presentation()
     extractor = TextExtractor(with_notes=bool(args.with_notes))
     deck = extractor.extract_deck(prs, source_path=str(in_path))
-    md = MarkdownRenderer().render(deck)
+    markdown_text = MarkdownRenderer().render(deck)
 
-    om.write_text(md_out, md)
+    output.write_text_file(output_path, markdown_text)
     return EXIT_OK
 
 

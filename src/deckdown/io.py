@@ -4,25 +4,45 @@ from pathlib import Path
 
 
 class OutputManager:
-    def default_md_out(self, input_path: Path) -> Path:
+    def derive_markdown_path_next_to_input(self, input_path: Path) -> Path:
         base = input_path.name
         name = base[:-5] if base.lower().endswith(".pptx") else base
         return input_path.with_name(f"{name}.md")
 
-    def resolve_md_out(self, input_path: Path, md_out_opt: str | None) -> Path:
-        if md_out_opt is None:
-            return self.default_md_out(input_path)
-        dest = Path(md_out_opt)
-        if dest.exists() and dest.is_dir():
-            return dest / self.default_md_out(input_path).name
-        as_str = str(dest)
-        if as_str.endswith("/") or as_str.endswith("\\"):
-            d = Path(as_str.rstrip("/\\"))
-            return d / self.default_md_out(input_path).name
-        if not dest.exists() and dest.suffix.lower() != ".md":
-            return dest / self.default_md_out(input_path).name
+    def resolve_markdown_output_path(self, input_path: Path, output_opt: str | Path | None) -> Path:
+        if output_opt is None:
+            return self.derive_markdown_path_next_to_input(input_path)
+
+        # Normalize to string for directory-hint check; Path may obscure trailing separators
+        output_str = str(output_opt)
+        if self._is_directory_hint(output_str):
+            return self._path_for_directory_hint(output_str, input_path)
+
+        dest = Path(output_str)
+        if self._is_existing_directory(dest):
+            return dest / self._markdown_filename(input_path)
+        if self._should_treat_as_directory(dest):
+            return dest / self._markdown_filename(input_path)
         return dest
 
-    def write_text(self, path: Path, content: str) -> None:
+    def write_text_file(self, path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+
+    # --- helpers ---
+
+    def _is_directory_hint(self, s: str) -> bool:
+        return s.endswith("/") or s.endswith("\\")
+
+    def _path_for_directory_hint(self, hint: str, input_path: Path) -> Path:
+        directory = Path(hint.rstrip("/\\"))
+        return directory / self._markdown_filename(input_path)
+
+    def _is_existing_directory(self, p: Path) -> bool:
+        return p.exists() and p.is_dir()
+
+    def _should_treat_as_directory(self, p: Path) -> bool:
+        return (not p.exists()) and (p.suffix.lower() != ".md")
+
+    def _markdown_filename(self, input_path: Path) -> str:
+        return self.derive_markdown_path_next_to_input(input_path).name
