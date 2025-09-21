@@ -5,7 +5,9 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from deckdown.extractors.text import extract_deck_text
+from deckdown.extractors.text import TextExtractor
+from deckdown.io import OutputManager
+from deckdown.loader import Loader
 from deckdown.renderers.markdown import MarkdownRenderer
 
 # Exit codes (align with implementation plan)
@@ -54,29 +56,6 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _default_md_out(input_path: Path) -> Path:
-    base = input_path.name
-    name = base[:-5] if base.lower().endswith(".pptx") else base
-    return input_path.with_name(f"{name}.md")
-
-
-def _resolve_md_out(in_path: Path, md_out_opt: str | None) -> Path:
-    if md_out_opt is None:
-        return _default_md_out(in_path)
-    dest = Path(md_out_opt)
-    if dest.exists() and dest.is_dir():
-        return dest / _default_md_out(in_path).name
-    # If it looks like a directory path ending with a separator, treat as directory
-    as_str = str(dest)
-    if as_str.endswith("/") or as_str.endswith("\\"):
-        d = Path(as_str.rstrip("/\\"))
-        return d / _default_md_out(in_path).name
-    # Heuristic: if destination does not exist and lacks .md extension, treat as directory
-    if not dest.exists() and dest.suffix.lower() != ".md":
-        return dest / _default_md_out(in_path).name
-    return dest
-
-
 def _cmd_extract(args: argparse.Namespace) -> int:
     in_path = Path(args.input)
     if not in_path.exists():
@@ -89,13 +68,15 @@ def _cmd_extract(args: argparse.Namespace) -> int:
         )
         return EXIT_INPUT_ERROR
 
-    md_out = _resolve_md_out(in_path, args.md_out)
+    om = OutputManager()
+    md_out = om.resolve_md_out(in_path, args.md_out)
 
-    deck = extract_deck_text(str(in_path), with_notes=bool(args.with_notes))
+    prs = Loader(str(in_path)).presentation()
+    extractor = TextExtractor(with_notes=bool(args.with_notes))
+    deck = extractor.extract_deck(prs, source_path=str(in_path))
     md = MarkdownRenderer().render(deck)
 
-    md_out.parent.mkdir(parents=True, exist_ok=True)
-    md_out.write_text(md, encoding="utf-8")
+    om.write_text(md_out, md)
     return EXIT_OK
 
 
