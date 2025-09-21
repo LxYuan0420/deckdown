@@ -5,7 +5,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from deckdown.models import Deck
+from deckdown.extractors.text import extract_deck_text
 from deckdown.renderers.markdown import MarkdownRenderer
 
 # Exit codes (align with implementation plan)
@@ -91,8 +91,7 @@ def _cmd_extract(args: argparse.Namespace) -> int:
 
     md_out = _resolve_md_out(in_path, args.md_out)
 
-    # Placeholder: construct an empty Deck; extractors will populate later.
-    deck = Deck(file=str(in_path), title=None, slides=())
+    deck = extract_deck_text(str(in_path), with_notes=bool(args.with_notes))
     md = MarkdownRenderer().render(deck)
 
     md_out.parent.mkdir(parents=True, exist_ok=True)

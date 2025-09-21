@@ -5,9 +5,17 @@ from pathlib import Path
 from deckdown.cli import EXIT_INPUT_ERROR, EXIT_OK, main
 
 
+def _write_min_pptx(path: Path) -> None:
+    # Create a minimal valid PPTX (no slides)
+    from pptx import Presentation
+
+    prs = Presentation()
+    prs.save(str(path))
+
+
 def test_cli_extract_writes_markdown(tmp_path: Path) -> None:
     pptx = tmp_path / "sample.pptx"
-    pptx.write_bytes(b"")
+    _write_min_pptx(pptx)
     out = tmp_path / "out.md"
 
     code = main(["extract", str(pptx), "--md-out", str(out)])
@@ -18,7 +26,7 @@ def test_cli_extract_writes_markdown(tmp_path: Path) -> None:
 
 def test_cli_extract_default_output_name(tmp_path: Path) -> None:
     pptx = tmp_path / "Deck Name.PPTX"  # ensure case-insensitivity
-    pptx.write_bytes(b"")
+    _write_min_pptx(pptx)
 
     code = main(["extract", str(pptx)])
     assert code == EXIT_OK
@@ -39,7 +47,7 @@ def test_cli_input_directory_is_error(tmp_path: Path) -> None:
 
 def test_cli_md_out_directory(tmp_path: Path) -> None:
     pptx = tmp_path / "deck.pptx"
-    pptx.write_bytes(b"")
+    _write_min_pptx(pptx)
     outdir = tmp_path / "out"
     code = main(["extract", str(pptx), "--md-out", str(outdir)])
     assert code == EXIT_OK
