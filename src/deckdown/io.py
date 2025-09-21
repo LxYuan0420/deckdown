@@ -13,23 +13,18 @@ class OutputManager:
         if output_opt is None:
             return self.derive_markdown_path_next_to_input(input_path)
 
-        # Normalize to string for directory-hint check; Path may obscure trailing separators
-        output_str = str(output_opt)
-        if self._is_directory_hint(output_str):
-            return self._path_for_directory_hint(output_str, input_path)
-
-        dest = Path(output_str)
-        if self._is_existing_directory(dest):
-            return dest / self._markdown_filename(input_path)
-        if self._should_treat_as_directory(dest):
-            return dest / self._markdown_filename(input_path)
-        return dest
+        dest = Path(output_opt)
+        directory_hint = self._is_directory_hint(str(output_opt))
+        treat_as_dir = (
+            directory_hint
+            or self._is_existing_directory(dest)
+            or self._should_treat_as_directory(dest)
+        )
+        return dest / self._markdown_filename(input_path) if treat_as_dir else dest
 
     def write_text_file(self, path: Path, content: str) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
-
-    # --- helpers ---
 
     def _is_directory_hint(self, s: str) -> bool:
         return s.endswith("/") or s.endswith("\\")

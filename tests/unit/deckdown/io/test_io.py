@@ -55,4 +55,3 @@ def test_write_text_file_creates_parents(tmp_path: Path) -> None:
     om.write_text_file(dest, "hello")
     assert dest.exists()
     assert dest.read_text(encoding="utf-8") == "hello"
-
