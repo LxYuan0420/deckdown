@@ -32,6 +32,9 @@ dist/
 # Misc caches
 .cache/
 
+# Editor swap files
+*.swp
+
 # Ignore root-level Markdown files (docs) except README.md
 /*.md
 !/README.md
