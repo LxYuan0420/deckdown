@@ -82,6 +82,28 @@ class SlideTextExtractor:
 
 
 @dataclass(frozen=True)
+class TitleResolver:
+    slide_extractor: SlideTextExtractor
+
+    def derive(self, prs: Any) -> str | None:  # noqa: ANN401
+        first_title = self._first_slide_title(prs)
+        if first_title:
+            return first_title
+        return self._core_properties_title(prs)
+
+    def _first_slide_title(self, prs: Any) -> str | None:  # noqa: ANN401
+        try:
+            first = next(iter(prs.slides))
+        except StopIteration:
+            return None
+        return self.slide_extractor._extract_title(first)
+
+    def _core_properties_title(self, prs: Any) -> str | None:  # noqa: ANN401
+        title = getattr(getattr(prs, "core_properties", None), "title", None)
+        return str(title) if title else None
+
+
+@dataclass(frozen=True)
 class TextExtractor:
     with_notes: bool = False
     orderer: ShapeOrderer = ShapeOrderer()
@@ -90,22 +112,5 @@ class TextExtractor:
     def extract_deck(self, prs: Any, *, source_path: str) -> Deck:  # noqa: ANN401
         slide_extractor = SlideTextExtractor(self.orderer, self.splitter)
         slides = [slide_extractor.extract(i, s) for i, s in enumerate(prs.slides, start=1)]
-        title = self._derive_deck_title(prs, slide_extractor)
+        title = TitleResolver(slide_extractor).derive(prs)
         return Deck(file=source_path, title=title, slides=tuple(slides))
-
-    def _derive_deck_title(self, prs: Any, slide_extractor: SlideTextExtractor) -> str | None:  # noqa: ANN401
-        try:
-            first = next(iter(prs.slides))
-        except StopIteration:
-            first = None
-        if first is not None:
-            t = slide_extractor._extract_title(first)
-            if t:
-                return t
-        try:
-            title = prs.core_properties.title
-            if title:
-                return str(title)
-        except Exception:
-            return None
-        return None
