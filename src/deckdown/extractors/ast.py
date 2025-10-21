@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.oxml.ns import qn
 
 from deckdown.ast import (
     BBox,
@@ -12,6 +13,9 @@ from deckdown.ast import (
     Paragraph,
     PicturePayload,
     PictureShape,
+    TableCell,
+    TablePayload,
+    TableShape,
     Shape,
     ShapeKind,
     SlideDoc,
@@ -176,7 +180,98 @@ class AstExtractor:
                 except Exception:  # pragma: no cover - defensive
                     pass
 
-                # Other kinds (tables, charts, groups) will arrive in later milestones
+                # tables
+                try:
+                    if getattr(shp, "shape_type", None) == MSO_SHAPE_TYPE.TABLE and getattr(shp, "has_table", False):  # type: ignore[attr-defined]
+                        tbl = shp.table
+                        n_rows = len(tbl.rows)
+                        n_cols = len(tbl.columns)
+
+                        # Pre-scan for merges using attributes on a:tc: rowSpan/gridSpan; vMerge/hMerge present on continued cells
+                        colspans = [[1 for _ in range(n_cols)] for _ in range(n_rows)]
+                        rowspans = [[1 for _ in range(n_cols)] for _ in range(n_rows)]
+                        hmerge = [[False for _ in range(n_cols)] for _ in range(n_rows)]
+                        vmerge = [[False for _ in range(n_cols)] for _ in range(n_rows)]
+                        for r in range(n_rows):
+                            for c in range(n_cols):
+                                tc = tbl.cell(r, c)._tc
+                                # Top-left cell carries spans
+                                try:
+                                    gs = tc.get("{%s}gridSpan" % qn("a:tc").partition("}")[0][1:])  # not reliable
+                                except Exception:
+                                    gs = None
+                                # Simpler: direct attribute access
+                                gs = tc.get("gridSpan") or gs
+                                rs = tc.get("rowSpan")
+                                hm = tc.get("hMerge")
+                                vm = tc.get("vMerge")
+                                if gs:
+                                    try:
+                                        colspans[r][c] = max(1, int(gs))
+                                    except Exception:
+                                        pass
+                                if rs:
+                                    try:
+                                        rowspans[r][c] = max(1, int(rs))
+                                    except Exception:
+                                        pass
+                                if hm:
+                                    hmerge[r][c] = True
+                                if vm:
+                                    vmerge[r][c] = True
+
+                        visited: set[tuple[int, int]] = set()
+                        cells: list[Shape] = []
+
+                        def cell_text_payload(_cell: Any) -> TextPayload:
+                            paras = []
+                            try:
+                                tf = _cell.text_frame
+                                for p in tf.paragraphs:
+                                    runs = [TextRun(text=(r.text or "")) for r in p.runs]
+                                    paras.append(Paragraph(lvl=int(getattr(p, "level", 0) or 0), runs=tuple(runs)))
+                            except Exception:  # pragma: no cover
+                                pass
+                            return TextPayload(paras=tuple(paras))
+
+                        table_cells: list[TableCell] = []
+                        for r in range(n_rows):
+                            for c in range(n_cols):
+                                if (r, c) in visited:
+                                    continue
+                                # Skip cells that are marked as continued merges
+                                if hmerge[r][c] or vmerge[r][c]:
+                                    continue
+                                rowspan = max(1, rowspans[r][c])
+                                colspan = max(1, colspans[r][c])
+                                # Mark covered cells as visited
+                                for rr in range(r, min(r + rowspan, n_rows)):
+                                    for cc in range(c, min(c + colspan, n_cols)):
+                                        if rr == r and cc == c:
+                                            continue
+                                        visited.add((rr, cc))
+
+                                tp = cell_text_payload(tbl.cell(r, c))
+                                table_cells.append(
+                                    TableCell(r=r, c=c, rowspan=rowspan, colspan=colspan, text=tp)
+                                )
+
+                        shapes.append(
+                            TableShape(
+                                id=f"s{getattr(shp, 'shape_id', z)}",
+                                kind=ShapeKind.TABLE,
+                                name=name,
+                                bbox=bbox,
+                                z=z,
+                                rotation=rot,
+                                table=TablePayload(rows=n_rows, cols=n_cols, cells=tuple(table_cells)),
+                            )
+                        )
+                        continue
+                except Exception:  # pragma: no cover - defensive
+                    pass
+
+                # Other kinds (charts, groups) will arrive in later milestones
 
             slide_model = SlideModel(index=idx, size=size, shapes=tuple(shapes))
             out[idx] = SlideDoc(slide=slide_model)

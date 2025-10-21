@@ -90,7 +90,29 @@ class PictureShape(ShapeBase):
     image: PicturePayload
 
 
-Shape = TextShape | PictureShape
+class TableCell(_FrozenModel):
+    r: int
+    c: int
+    rowspan: int = 1
+    colspan: int = 1
+    text: TextPayload = Field(default_factory=TextPayload)
+    fill: Optional[Color] = None
+    borders: Optional[dict] = None  # future: left/right/top/bottom
+
+
+class TablePayload(_FrozenModel):
+    rows: int
+    cols: int
+    cells: tuple[TableCell, ...] = ()
+    header_row: Optional[bool] = None
+
+
+class TableShape(ShapeBase):
+    kind: Literal[ShapeKind.TABLE]
+    table: TablePayload
+
+
+Shape = TextShape | PictureShape | TableShape
 
 
 class SlideSize(_FrozenModel):
@@ -110,4 +132,3 @@ class SlideModel(_FrozenModel):
 class SlideDoc(_FrozenModel):
     version: Literal["deckdown-1"] = "deckdown-1"
     slide: SlideModel
-
