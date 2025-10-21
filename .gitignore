@@ -39,3 +39,5 @@ dist/
 /*.md
 !/README.md
 tmp_chart*.pptx
+tmp_axes_points.pptx
+tmp_setaxes.pptx

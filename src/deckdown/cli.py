@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
+import logging
 from pathlib import Path
 
 from deckdown.extractors.text import TextExtractor
@@ -57,6 +58,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Include speaker notes (stub; ignored for now)",
     )
+    p_extract.add_argument(
+        "--log-level",
+        dest="log_level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging level for extraction diagnostics (default: info)",
+    )
 
     p_validate = sub.add_parser(
         "validate",
@@ -78,10 +86,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_preview.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
     p_preview.add_argument("-o", "--output", dest="output", required=True, help="Output HTML path")
 
+    p_schema = sub.add_parser(
+        "schema",
+        help="Print JSON Schema for the per-slide AST (SlideDoc)",
+    )
+    p_schema.add_argument("-o", "--output", dest="output", help="Output path (writes to stdout if omitted)")
+
     return parser
 
 
 def _cmd_extract(args: argparse.Namespace) -> int:
+    logging.basicConfig(level=getattr(logging, str(args.log_level).upper(), logging.INFO))
     in_path = Path(args.input)
     if not in_path.exists():
         print(f"error: input not found: {in_path}", file=sys.stderr)
@@ -104,6 +119,12 @@ def _cmd_extract(args: argparse.Namespace) -> int:
     ast_docs = AstExtractor().extract(prs)
     # Convert SlideDoc models to plain dicts for JSON dump
     ast_dicts = {i: doc.model_dump(mode="python") for i, doc in ast_docs.items()}
+    # Tiny diagnostics
+    shape_counts: dict[str, int] = {}
+    for doc in ast_docs.values():
+        for sh in doc.slide.shapes:
+            shape_counts[sh.kind.value] = shape_counts.get(sh.kind.value, 0) + 1
+    logging.info("extracted %d slides; shapes=%s", len(ast_docs), shape_counts)
 
     markdown_text = MarkdownRenderer().render(deck, ast_per_slide=ast_dicts)
 
@@ -146,6 +167,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         docs = MarkdownReader().load_file(in_path)
         html = HtmlPreviewRenderer().render_deck(docs)
         out_path.write_text(html, encoding="utf-8")
+        return EXIT_OK
+    if ns.command == "schema":
+        from deckdown.ast import SlideDoc
+        import json
+        schema = SlideDoc.model_json_schema()
+        text = json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=False)
+        out = getattr(ns, "output", None)
+        if out:
+            Path(out).write_text(text, encoding="utf-8")
+        else:
+            print(text)
         return EXIT_OK
     # Future subcommands can be added here.
     return EXIT_USAGE  # pragma: no cover (argparse enforces subcommands)
