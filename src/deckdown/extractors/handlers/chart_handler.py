@@ -89,7 +89,36 @@ class ChartShapeHandler(ShapeHandler):
                             points_meta.append({"idx": idx, "color": pc})
                 except Exception:
                     points_meta = []
-                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None, x_values=xvals, sizes=sizes))
+                labels = None
+                try:
+                    dl = getattr(ser, "data_labels", None)
+                    if dl is not None:
+                        labels = {}
+                        for key in ("show_value", "show_category_name", "show_series_name", "show_percentage"):
+                            try:
+                                val = getattr(dl, key)
+                                if val is not None:
+                                    labels[key] = bool(val)
+                            except Exception:
+                                pass
+                        try:
+                            pos = getattr(dl, "position", None)
+                            if pos is not None:
+                                labels["position"] = str(pos).split(" ")[0].lower()
+                        except Exception:
+                            pass
+                        try:
+                            fmt = getattr(dl, "number_format", None)
+                            if fmt:
+                                labels["number_format"] = str(fmt)
+                        except Exception:
+                            pass
+                        if not labels:
+                            labels = None
+                except Exception:
+                    labels = None
+
+                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None, x_values=xvals, sizes=sizes, labels=labels))
 
         plot_area = {
             "has_data_labels": bool(getattr(plots[0], "has_data_labels", False)) if plots else False,

@@ -298,19 +298,31 @@ class DeckAssembler:
                 except Exception:
                     pass
 
-        # Series colors (explicit only)
+        # Series data labels and colors (explicit)
         try:
             plot0 = chart.plots[0]
-            for i, ser in enumerate((sh.chart.series or ())):
-                if not ser.color or not ser.color.get("resolved_rgb"):
-                    continue
-                rgb = ser.color["resolved_rgb"][1:]
+            from pptx.dml.color import RGBColor
+            for i, ser in enumerate((sh.chart.series or ())) :
                 chart_ser = plot0.series[i]
-                chart_ser.format.fill.solid()
-                from pptx.dml.color import RGBColor
-
-                chart_ser.format.fill.fore_color.rgb = RGBColor(
-                    int(rgb[0:2], 16), int(rgb[2:4], 16), int(rgb[4:6], 16)
-                )
+                lab = getattr(ser, "labels", None) or {}
+                if lab:
+                    dl = chart_ser.data_labels
+                    for key in ("show_value", "show_category_name", "show_series_name", "show_percentage"):
+                        if key in lab and lab[key] is not None:
+                            try:
+                                setattr(dl, key, bool(lab[key]))
+                            except Exception:
+                                pass
+                    if lab.get("number_format"):
+                        try:
+                            dl.number_format = str(lab["number_format"])
+                        except Exception:
+                            pass
+                if ser.color and ser.color.get("resolved_rgb"):
+                    rgb = ser.color["resolved_rgb"][1:]
+                    chart_ser.format.fill.solid()
+                    chart_ser.format.fill.fore_color.rgb = RGBColor(
+                        int(rgb[0:2], 16), int(rgb[2:4], 16), int(rgb[4:6], 16)
+                    )
         except Exception:
             pass

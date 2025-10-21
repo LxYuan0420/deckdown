@@ -78,6 +78,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_assemble.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
     p_assemble.add_argument("-o", "--output", dest="output", required=True, help="Output PPTX path")
+    p_assemble.add_argument(
+        "--log-level",
+        dest="log_level",
+        choices=["debug", "info", "warning", "error"],
+        default="info",
+        help="Logging level for assemble diagnostics (default: info)",
+    )
 
     p_preview = sub.add_parser(
         "preview",
@@ -150,12 +157,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 6
         return EXIT_OK
     if ns.command == "assemble":
+        logging.basicConfig(level=getattr(logging, str(getattr(ns, "log_level", "info")).upper(), logging.INFO))
         in_path = Path(ns.input)
         out_path = Path(ns.output)
         if not in_path.exists() or in_path.is_dir():
             print(f"error: input markdown not found: {in_path}", file=sys.stderr)
             return EXIT_INPUT_ERROR
         docs = MarkdownReader().load_file(in_path)
+        # tiny metrics
+        slide_ct = len(docs)
+        shape_ct = sum(len(d.slide.shapes) for d in docs)
+        logging.info("assemble input: slides=%d shapes=%d", slide_ct, shape_ct)
         DeckAssembler().assemble(docs, out=out_path)
         return EXIT_OK
     if ns.command == "preview":
