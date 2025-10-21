@@ -56,7 +56,21 @@ class ChartShapeHandler(ShapeHandler):
                         color = ctx.theme.color_dict_from_colorformat(fc)
                 except Exception:
                     color = None
-                series_out.append(ChartSeriesModel(name=name, values=vals, color=color))
+                points_meta = []
+                try:
+                    for idx, pt in enumerate(ser.points):
+                        pc = None
+                        try:
+                            fc = getattr(getattr(pt.format, "fill", None), "fore_color", None)
+                            if fc is not None:
+                                pc = ctx.theme.color_dict_from_colorformat(fc)
+                        except Exception:
+                            pc = None
+                        if pc:
+                            points_meta.append({"idx": idx, "color": pc})
+                except Exception:
+                    points_meta = []
+                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None))
 
         plot_area = {
             "has_data_labels": bool(getattr(plots[0], "has_data_labels", False)) if plots else False,
@@ -65,6 +79,44 @@ class ChartShapeHandler(ShapeHandler):
         if getattr(ch, "legend", None) is not None and getattr(ch.legend, "position", None) is not None:
             plot_area["legend_pos"] = str(ch.legend.position).split(" ")[0].lower()
 
+        axes = {}
+        try:
+            ca = getattr(ch, "category_axis", None)
+            if ca is not None and getattr(ca, "has_title", False):
+                title = getattr(getattr(ca, "axis_title", None), "text_frame", None)
+                if title is not None and title.text:
+                    axes.setdefault("category", {})["title"] = str(title.text)
+        except Exception:
+            pass
+        try:
+            va = getattr(ch, "value_axis", None)
+            if va is not None:
+                vdict = {}
+                try:
+                    if getattr(va, "has_title", False):
+                        t = getattr(getattr(va, "axis_title", None), "text_frame", None)
+                        if t is not None and t.text:
+                            vdict["title"] = str(t.text)
+                except Exception:
+                    pass
+                for key, attr in ("min", "minimum_scale"), ("max", "maximum_scale"), ("major_unit", "major_unit"):
+                    try:
+                        val = getattr(va, attr)
+                        if val is not None:
+                            vdict[key] = float(val)
+                    except Exception:
+                        pass
+                try:
+                    fmt = getattr(getattr(va, "tick_labels", None), "number_format", None)
+                    if fmt:
+                        vdict["format_code"] = str(fmt)
+                except Exception:
+                    pass
+                if vdict:
+                    axes["value"] = vdict
+        except Exception:
+            pass
+
         return ChartShape(
             id=f"s{getattr(shape, 'shape_id', z)}",
             kind=ShapeKind.CHART,
@@ -72,5 +124,5 @@ class ChartShapeHandler(ShapeHandler):
             bbox=bbox,
             z=z,
             rotation=None,
-            chart=ChartPayload(type=ctype or "unknown", categories=tuple(cats), series=tuple(series_out), plot_area=plot_area),
+            chart=ChartPayload(type=ctype or "unknown", categories=tuple(cats), series=tuple(series_out), plot_area=plot_area, axes=axes or None),
         )

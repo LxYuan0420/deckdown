@@ -153,6 +153,74 @@ class DeckAssembler:
         except Exception:
             pass
 
+        # Per-point override colors and axes
+        try:
+            plot0 = chart.plots[0]
+            from pptx.dml.color import RGBColor
+            for i, ser in enumerate((sh.chart.series or ())) :
+                chart_ser = plot0.series[i]
+                if getattr(ser, "points", None):
+                    for ptmeta in ser.points:
+                        idx = ptmeta.get("idx")
+                        col = (ptmeta.get("color") or {}).get("resolved_rgb", None)
+                        if idx is None or not col:
+                            continue
+                        hexrgb = col[1:]
+                        try:
+                            pt = chart_ser.points[idx]
+                            pt.format.fill.solid()
+                            pt.format.fill.fore_color.rgb = RGBColor(
+                                int(hexrgb[0:2], 16), int(hexrgb[2:4], 16), int(hexrgb[4:6], 16)
+                            )
+                        except Exception:
+                            continue
+            # Axes (titles, ranges, number format)
+            ax = sh.chart.axes or {}
+            if "category" in ax:
+                t = ax["category"].get("title")
+                if t:
+                    chart.category_axis.has_title = True
+                    chart.category_axis.axis_title.text_frame.text = str(t)
+            if "value" in ax:
+                v = ax["value"]
+                if v.get("title"):
+                    chart.value_axis.has_title = True
+                    chart.value_axis.axis_title.text_frame.text = str(v["title"])
+                if v.get("min") is not None:
+                    chart.value_axis.minimum_scale = float(v["min"])
+                if v.get("max") is not None:
+                    chart.value_axis.maximum_scale = float(v["max"])
+                if v.get("major_unit") is not None:
+                    chart.value_axis.major_unit = float(v["major_unit"])
+                if v.get("format_code"):
+                    chart.value_axis.tick_labels.number_format = str(v["format_code"])
+        except Exception:
+            pass
+
+        # Per-point override colors
+        try:
+            plot0 = chart.plots[0]
+            from pptx.dml.color import RGBColor
+            for i, ser in enumerate((sh.chart.series or ())) :
+                if not getattr(ser, "points", None):
+                    continue
+                chart_ser = plot0.series[i]
+                for ptmeta in ser.points:
+                    idx = ptmeta.get("idx")
+                    col = (ptmeta.get("color") or {}).get("resolved_rgb", None)
+                    if idx is None or not col:
+                        continue
+                    hexrgb = col[1:]
+                    try:
+                        pt = chart_ser.points[idx]
+                        pt.format.fill.solid()
+                        pt.format.fill.fore_color.rgb = RGBColor(
+                            int(hexrgb[0:2], 16), int(hexrgb[2:4], 16), int(hexrgb[4:6], 16)
+                        )
+                    except Exception:
+                        continue
+        except Exception:
+            pass
     def _add_line(self, slide, sh: LineShape) -> None:  # noqa: ANN001
         x1 = Emu(sh.bbox.x_emu); y1 = Emu(sh.bbox.y_emu)
         x2 = Emu(sh.bbox.x_emu + sh.bbox.w_emu); y2 = Emu(sh.bbox.y_emu + sh.bbox.h_emu)
