@@ -10,6 +10,7 @@ from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE, MSO_CONNECTOR_TYPE
 from pptx.util import Emu
 
 from deckdown.ast import BasicShape, LineShape, PictureShape, SlideDoc, TableShape, TextShape, ChartShape
+from deckdown.text.emit import write_text_frame
 from pptx.chart.data import CategoryChartData, XyChartData, BubbleChartData
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 
@@ -59,16 +60,7 @@ class DeckAssembler:
         left = Emu(sh.bbox.x_emu); top = Emu(sh.bbox.y_emu); width = Emu(sh.bbox.w_emu); height = Emu(sh.bbox.h_emu)
         tx = slide.shapes.add_textbox(left, top, width, height)
         tf = tx.text_frame
-        tf.clear()
-        first = True
-        for p in sh.text.paras:
-            if first:
-                par = tf.paragraphs[0]
-                first = False
-            else:
-                par = tf.add_paragraph()
-            par.level = p.lvl
-            par.text = "".join(r.text for r in p.runs)
+        write_text_frame(tf, sh.text)
 
     def _add_picture(self, slide, sh: PictureShape) -> None:  # noqa: ANN001
         media = sh.image.media
@@ -107,16 +99,7 @@ class DeckAssembler:
                     pass
             # write text
             tf = t.cell(r, c).text_frame
-            tf.clear()
-            first = True
-            for p in cell.text.paras:
-                if first:
-                    par = tf.paragraphs[0]
-                    first = False
-                else:
-                    par = tf.add_paragraph()
-                par.level = p.lvl
-                par.text = "".join(run.text for run in p.runs)
+            write_text_frame(tf, cell.text)
 
     def _add_basic(self, slide, sh: BasicShape) -> None:  # noqa: ANN001
         left = Emu(sh.bbox.x_emu); top = Emu(sh.bbox.y_emu); width = Emu(sh.bbox.w_emu); height = Emu(sh.bbox.h_emu)
@@ -132,16 +115,7 @@ class DeckAssembler:
         # text
         if sh.text and sh.text.paras:
             tf = shp.text_frame
-            tf.clear()
-            first = True
-            for p in sh.text.paras:
-                if first:
-                    par = tf.paragraphs[0]
-                    first = False
-                else:
-                    par = tf.add_paragraph()
-                par.level = p.lvl
-                par.text = "".join(run.text for run in p.runs)
+            write_text_frame(tf, sh.text)
         # style (fill only; stroke best-effort)
         try:
             if sh.style and sh.style.fill and sh.style.fill.color and sh.style.fill.color.get("resolved_rgb"):
