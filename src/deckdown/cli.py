@@ -11,6 +11,8 @@ from deckdown.loader import Loader
 from deckdown.renderers.markdown import MarkdownRenderer
 from deckdown.extractors.ast import AstExtractor
 from deckdown.validate import MarkdownValidator
+from deckdown.reader import MarkdownReader
+from deckdown.assemble import DeckAssembler
 
 # Exit codes (align with implementation plan)
 EXIT_OK = 0
@@ -61,6 +63,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_validate.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
 
+    p_assemble = sub.add_parser(
+        "assemble",
+        help="Assemble a PPTX from a markdown file containing deckdown JSON blocks",
+    )
+    p_assemble.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
+    p_assemble.add_argument("-o", "--output", dest="output", required=True, help="Output PPTX path")
+
     return parser
 
 
@@ -110,6 +119,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             for e in errs:
                 print(f"validate: {e}", file=sys.stderr)
             return 6
+        return EXIT_OK
+    if ns.command == "assemble":
+        in_path = Path(ns.input)
+        out_path = Path(ns.output)
+        if not in_path.exists() or in_path.is_dir():
+            print(f"error: input markdown not found: {in_path}", file=sys.stderr)
+            return EXIT_INPUT_ERROR
+        docs = MarkdownReader().load_file(in_path)
+        DeckAssembler().assemble(docs, out=out_path)
         return EXIT_OK
     # Future subcommands can be added here.
     return EXIT_USAGE  # pragma: no cover (argparse enforces subcommands)
