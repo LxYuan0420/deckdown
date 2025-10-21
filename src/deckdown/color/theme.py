@@ -107,7 +107,11 @@ class ThemeResolver:
         key = self._key_from_theme_enum(theme_enum) if theme_enum else None
         if key:
             rgb = self.scheme.get(key)
-            return {"resolved_rgb": rgb, "theme_ref": {"key": key}} if rgb else {"theme_ref": {"key": key}}
+            return (
+                {"resolved_rgb": rgb, "theme_ref": {"key": key}}
+                if rgb
+                else {"theme_ref": {"key": key}}
+            )
         # Fall back to explicit RGB if available
         try:
             rgb = getattr(cf, "rgb", None)
@@ -116,4 +120,3 @@ class ThemeResolver:
         except Exception:
             return None
         return None
-

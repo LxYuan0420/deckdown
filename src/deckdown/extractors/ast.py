@@ -58,4 +58,3 @@ class AstExtractor:
                         break
             out[idx] = SlideDoc(slide=SlideModel(index=idx, size=size, shapes=tuple(built)))
         return out
-

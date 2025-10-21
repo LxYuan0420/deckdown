@@ -15,4 +15,3 @@ class ShapeHandler(ABC):
     @abstractmethod
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[Shape]:  # noqa: ANN401
         ...
-

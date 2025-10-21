@@ -122,7 +122,9 @@ class ChartSeriesModel(_FrozenModel):
     points: Optional[tuple[dict, ...]] = None
     x_values: Optional[tuple[float | None, ...]] = None
     sizes: Optional[tuple[float | None, ...]] = None
-    labels: Optional[dict] = None  # { show_value?, show_category_name?, show_series_name?, show_percentage?, position?, number_format? }
+    labels: Optional[dict] = (
+        None  # { show_value?, show_category_name?, show_series_name?, show_percentage?, position?, number_format? }
+    )
 
 
 class ChartPayload(_FrozenModel):
@@ -139,6 +141,7 @@ class ChartPayload(_FrozenModel):
 class ChartShape(ShapeBase):
     kind: Literal[ShapeKind.CHART]
     chart: ChartPayload
+
 
 class StrokeSpec(_FrozenModel):
     color: Optional[Color] = None

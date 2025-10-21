@@ -13,4 +13,3 @@ def write_text_frame(tf: Any, text: TextPayload) -> None:  # noqa: ANN401
         first = False
         par.level = p.lvl
         par.text = "".join(run.text for run in p.runs)
-

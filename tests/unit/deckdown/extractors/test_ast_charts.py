@@ -19,7 +19,9 @@ def _make_chart_deck(tmp: Path) -> Path:
     data.categories = ["A", "B", "C"]
     data.add_series("S1", (1, 2, 3))
     data.add_series("S2", (4, 5, 6))
-    s.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(1), Inches(1), Inches(4), Inches(3), data)
+    s.shapes.add_chart(
+        XL_CHART_TYPE.COLUMN_CLUSTERED, Inches(1), Inches(1), Inches(4), Inches(3), data
+    )
     prs.save(str(p))
     return p
 
@@ -37,4 +39,3 @@ def test_ast_charts_basic(tmp_path: Path) -> None:
     assert len(ch.series) == 2
     assert tuple(ch.series[0].values) == (1, 2, 3)
     assert tuple(ch.series[1].values) == (4, 5, 6)
-

@@ -97,7 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
         "schema",
         help="Print JSON Schema for the per-slide AST (SlideDoc)",
     )
-    p_schema.add_argument("-o", "--output", dest="output", help="Output path (writes to stdout if omitted)")
+    p_schema.add_argument(
+        "-o", "--output", dest="output", help="Output path (writes to stdout if omitted)"
+    )
 
     return parser
 
@@ -157,7 +159,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 6
         return EXIT_OK
     if ns.command == "assemble":
-        logging.basicConfig(level=getattr(logging, str(getattr(ns, "log_level", "info")).upper(), logging.INFO))
+        logging.basicConfig(
+            level=getattr(logging, str(getattr(ns, "log_level", "info")).upper(), logging.INFO)
+        )
         in_path = Path(ns.input)
         out_path = Path(ns.output)
         if not in_path.exists() or in_path.is_dir():
@@ -183,6 +187,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if ns.command == "schema":
         from deckdown.ast import SlideDoc
         import json
+
         schema = SlideDoc.model_json_schema()
         text = json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=False)
         out = getattr(ns, "output", None)

@@ -11,4 +11,3 @@ def test_schema_writes_file(tmp_path: Path) -> None:
     assert code == EXIT_OK
     text = out.read_text(encoding="utf-8")
     assert '"title": "SlideDoc"' in text or '"$defs"' in text
-

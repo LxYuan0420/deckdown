@@ -15,17 +15,22 @@ def _make_xy_bubble(tmp: Path) -> Path:
     p = tmp / "xyb.pptx"
     prs = Presentation()
     s1 = prs.slides.add_slide(prs.slide_layouts[6])
-    xyd = XyChartData(); xs=[1,2,3]; ys=[4,5,6];
-    ser = xyd.add_series("S");
-    for x,y in zip(xs, ys):
-        ser.add_data_point(x,y)
+    xyd = XyChartData()
+    xs = [1, 2, 3]
+    ys = [4, 5, 6]
+    ser = xyd.add_series("S")
+    for x, y in zip(xs, ys):
+        ser.add_data_point(x, y)
     s1.shapes.add_chart(XL_CHART_TYPE.XY_SCATTER, Inches(1), Inches(1), Inches(4), Inches(3), xyd)
 
     s2 = prs.slides.add_slide(prs.slide_layouts[6])
-    bd = BubbleChartData(); xs=[1,2,3]; ys=[3,2,1]; sz=[10,20,30]
-    bser = bd.add_series("B");
-    for x,y,r in zip(xs, ys, sz):
-        bser.add_data_point(x,y,r)
+    bd = BubbleChartData()
+    xs = [1, 2, 3]
+    ys = [3, 2, 1]
+    sz = [10, 20, 30]
+    bser = bd.add_series("B")
+    for x, y, r in zip(xs, ys, sz):
+        bser.add_data_point(x, y, r)
     s2.shapes.add_chart(XL_CHART_TYPE.BUBBLE, Inches(1), Inches(1), Inches(4), Inches(3), bd)
 
     prs.save(str(p))

@@ -14,7 +14,9 @@ from deckdown.extractors.handlers.base import ShapeHandler
 class GroupExtractor:
     handlers: tuple[ShapeHandler, ...]
 
-    def extract(self, grp: Any, *, z_start: int, ctx: ExtractContext) -> tuple[list[Shape], int, GroupShape]:  # noqa: ANN401
+    def extract(
+        self, grp: Any, *, z_start: int, ctx: ExtractContext
+    ) -> tuple[list[Shape], int, GroupShape]:  # noqa: ANN401
         z = z_start
         out: list[Shape] = []
         child_ids: list[str] = []
@@ -71,4 +73,3 @@ class _ShapeProxy:
         if name == "top":
             return int(getattr(self._shp, "top", 0)) + self._dy
         return getattr(self._shp, name)
-

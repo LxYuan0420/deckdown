@@ -16,12 +16,16 @@ def emu_to_px(v_emu: int) -> int:
 
 @dataclass(frozen=True)
 class HtmlPreviewRenderer:
-    def render_slide(self, doc: SlideDoc) -> str:
+    def render_slide(self, doc: SlideDoc) -> str:  # noqa: C901
         s = doc.slide
         wpx = emu_to_px(s.size.width_emu)
         hpx = emu_to_px(s.size.height_emu)
         out: list[str] = []
-        out.append(f'<div class="slide" style="position:relative;width:{wpx}px;height:{hpx}px;border:1px solid #ddd;margin:16px auto;">')
+        slide_style = (
+            f"position:relative;width:{wpx}px;height:{hpx}px;"
+            "border:1px solid #ddd;margin:16px auto;"
+        )
+        out.append(f'<div class="slide" style="{slide_style}">')
         for sh in s.shapes:
             x = emu_to_px(sh.bbox.x_emu)
             y = emu_to_px(sh.bbox.y_emu)
@@ -29,15 +33,36 @@ class HtmlPreviewRenderer:
             h = emu_to_px(sh.bbox.h_emu)
             if sh.kind.value == "text_box":
                 text = " ".join(run.text for p in sh.text.paras for run in p.runs)
-                out.append(f'<div class="text" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;overflow:hidden;">{html.escape(text)}</div>')
+                text_style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
+                    "overflow:hidden;"
+                )
+                out.append(f'<div class="text" style="{text_style}">{html.escape(text)}</div>')
             elif sh.kind.value == "picture" and sh.image.media and sh.image.media.data_url:
-                out.append(f'<img class="pic" src="{sh.image.media.data_url}" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;object-fit:contain;" />')
+                pic_style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
+                    "object-fit:contain;"
+                )
+                out.append(
+                    f'<img class="pic" src="{sh.image.media.data_url}" style="{pic_style}" />'
+                )
             elif sh.kind.value == "shape_basic":
-                out.append(f'<div class="shape" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;border:1px solid #999;background:rgba(0,0,0,0.03)"></div>')
+                shape_style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
+                    "border:1px solid #999;background:rgba(0,0,0,0.03);"
+                )
+                out.append(f'<div class="shape" style="{shape_style}"></div>')
             elif sh.kind.value == "line":
-                out.append(f'<div class="line" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;border-top:1px solid #666"></div>')
+                line_style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
+                    "border-top:1px solid #666;"
+                )
+                out.append(f'<div class="line" style="{line_style}"></div>')
             elif sh.kind.value == "table":
-                out.append(f'<div class="table" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:auto;">')
+                table_style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:auto;"
+                )
+                out.append(f'<div class="table" style="{table_style}">')
                 out.append('<table style="border-collapse:collapse;font-size:12px;">')
                 # naive render: place cell texts row-major
                 # build a simple grid
@@ -46,14 +71,23 @@ class HtmlPreviewRenderer:
                     text = " ".join(run.text for p in c.text.paras for run in p.runs)
                     grid[c.r][c.c] = html.escape(text)
                 for row in grid:
-                    out.append('<tr>')
+                    out.append("<tr>")
                     for cell in row:
-                        out.append(f'<td style="border:1px solid #ccc;padding:2px 4px;">{cell}</td>')
-                    out.append('</tr>')
-                out.append('</table></div>')
+                        out.append(
+                            f'<td style="border:1px solid #ccc;padding:2px 4px;">{cell}</td>'
+                        )
+                    out.append("</tr>")
+                out.append("</table></div>")
             elif sh.kind.value == "chart":
-                out.append(f'<div class="chart" style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;border:1px dashed #bbb;display:flex;align-items:center;justify-content:center;font:12px sans-serif;color:#666;">chart: {html.escape(sh.chart.type)}</div>')
-        out.append('</div>')
+                style = (
+                    f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
+                    "border:1px dashed #bbb;display:flex;align-items:center;justify-content:center;"
+                    "font:12px sans-serif;color:#666;"
+                )
+                out.append(
+                    f'<div class="chart" style="{style}">chart: {html.escape(sh.chart.type)}</div>'
+                )
+        out.append("</div>")
         return "\n".join(out)
 
     def render_deck(self, docs: list[SlideDoc]) -> str:
@@ -73,4 +107,3 @@ class HtmlPreviewRenderer:
 {body}
 </div>
 """.strip()
-

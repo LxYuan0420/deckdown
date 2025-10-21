@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
 from deckdown.ast import SlideDoc
 
@@ -34,4 +34,3 @@ class MarkdownReader:
             payload = json.loads(raw)
             docs.append(SlideDoc.model_validate(payload))
         return docs
-

@@ -24,9 +24,17 @@ class ChartShapeHandler(ShapeHandler):
         ctype_enum = getattr(ch, "chart_type", None)
         ctype = None
         if ctype_enum is not None:
-            if ctype_enum in (XL_CHART_TYPE.COLUMN_CLUSTERED, XL_CHART_TYPE.COLUMN_STACKED, XL_CHART_TYPE.COLUMN_STACKED_100):
+            if ctype_enum in (
+                XL_CHART_TYPE.COLUMN_CLUSTERED,
+                XL_CHART_TYPE.COLUMN_STACKED,
+                XL_CHART_TYPE.COLUMN_STACKED_100,
+            ):
                 ctype = "column"
-            elif ctype_enum in (XL_CHART_TYPE.BAR_CLUSTERED, XL_CHART_TYPE.BAR_STACKED, XL_CHART_TYPE.BAR_STACKED_100):
+            elif ctype_enum in (
+                XL_CHART_TYPE.BAR_CLUSTERED,
+                XL_CHART_TYPE.BAR_STACKED,
+                XL_CHART_TYPE.BAR_STACKED_100,
+            ):
                 ctype = "bar"
             elif ctype_enum in (XL_CHART_TYPE.LINE, XL_CHART_TYPE.LINE_MARKERS):
                 ctype = "line"
@@ -94,7 +102,12 @@ class ChartShapeHandler(ShapeHandler):
                     dl = getattr(ser, "data_labels", None)
                     if dl is not None:
                         labels = {}
-                        for key in ("show_value", "show_category_name", "show_series_name", "show_percentage"):
+                        for key in (
+                            "show_value",
+                            "show_category_name",
+                            "show_series_name",
+                            "show_percentage",
+                        ):
                             try:
                                 val = getattr(dl, key)
                                 if val is not None:
@@ -118,13 +131,28 @@ class ChartShapeHandler(ShapeHandler):
                 except Exception:
                     labels = None
 
-                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None, x_values=xvals, sizes=sizes, labels=labels))
+                series_out.append(
+                    ChartSeriesModel(
+                        name=name,
+                        values=vals,
+                        color=color,
+                        points=tuple(points_meta) if points_meta else None,
+                        x_values=xvals,
+                        sizes=sizes,
+                        labels=labels,
+                    )
+                )
 
         plot_area = {
-            "has_data_labels": bool(getattr(plots[0], "has_data_labels", False)) if plots else False,
+            "has_data_labels": bool(getattr(plots[0], "has_data_labels", False))
+            if plots
+            else False,
             "has_legend": bool(getattr(ch, "has_legend", False)),
         }
-        if getattr(ch, "legend", None) is not None and getattr(ch.legend, "position", None) is not None:
+        if (
+            getattr(ch, "legend", None) is not None
+            and getattr(ch.legend, "position", None) is not None
+        ):
             plot_area["legend_pos"] = str(ch.legend.position).split(" ")[0].lower()
 
         axes = {}
@@ -147,7 +175,11 @@ class ChartShapeHandler(ShapeHandler):
                             vdict["title"] = str(t.text)
                 except Exception:
                     pass
-                for key, attr in ("min", "minimum_scale"), ("max", "maximum_scale"), ("major_unit", "major_unit"):
+                for key, attr in (
+                    ("min", "minimum_scale"),
+                    ("max", "maximum_scale"),
+                    ("major_unit", "major_unit"),
+                ):
                     try:
                         val = getattr(va, attr)
                         if val is not None:
@@ -172,5 +204,11 @@ class ChartShapeHandler(ShapeHandler):
             bbox=bbox,
             z=z,
             rotation=None,
-            chart=ChartPayload(type=ctype or "unknown", categories=tuple(cats), series=tuple(series_out), plot_area=plot_area, axes=axes or None),
+            chart=ChartPayload(
+                type=ctype or "unknown",
+                categories=tuple(cats),
+                series=tuple(series_out),
+                plot_area=plot_area,
+                axes=axes or None,
+            ),
         )

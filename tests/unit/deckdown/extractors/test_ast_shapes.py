@@ -30,4 +30,3 @@ def test_ast_basic_and_line(tmp_path: Path) -> None:
     kinds = [sh.kind.value for sh in s1.shapes]
     assert "shape_basic" in kinds
     assert "line" in kinds
-

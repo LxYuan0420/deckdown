@@ -14,8 +14,12 @@ def _make_group_deck(tmp: Path) -> Path:
     p = tmp / "group.pptx"
     prs = Presentation()
     s = prs.slides.add_slide(prs.slide_layouts[6])
-    rect = s.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.RECTANGLE, Inches(1), Inches(1), Inches(2), Inches(1))
-    oval = s.shapes.add_shape(MSO_AUTO_SHAPE_TYPE.OVAL, Inches(3.5), Inches(1), Inches(1), Inches(1))
+    rect = s.shapes.add_shape(
+        MSO_AUTO_SHAPE_TYPE.RECTANGLE, Inches(1), Inches(1), Inches(2), Inches(1)
+    )
+    oval = s.shapes.add_shape(
+        MSO_AUTO_SHAPE_TYPE.OVAL, Inches(3.5), Inches(1), Inches(1), Inches(1)
+    )
     s.shapes.add_group_shape([rect, oval])
     prs.save(str(p))
     return p

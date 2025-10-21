@@ -44,7 +44,9 @@ def build_chart_data(xl_type: XL_CHART_TYPE, series: Iterable[Any], categories: 
     data = CategoryChartData()
     data.categories = list(categories or [])
     for ser in series or ():
-        data.add_series(ser.name or "Series", [v if v is not None else 0 for v in (ser.values or ())])
+        data.add_series(
+            ser.name or "Series", [v if v is not None else 0 for v in (ser.values or ())]
+        )
     return data
 
 
@@ -144,4 +146,3 @@ def apply_axes(chart: Any, axes: dict | None) -> None:  # noqa: ANN401
                 chart.value_axis.tick_labels.number_format = str(v["format_code"])
         except Exception:
             pass
-

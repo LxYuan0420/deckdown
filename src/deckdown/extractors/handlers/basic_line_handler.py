@@ -4,7 +4,15 @@ from typing import Any, Optional
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
-from deckdown.ast import BasicShape, BasicStyle, FillSpec, LineShape, ShapeKind, StrokeSpec, TextPayload
+from deckdown.ast import (
+    BasicShape,
+    BasicStyle,
+    FillSpec,
+    LineShape,
+    ShapeKind,
+    StrokeSpec,
+    TextPayload,
+)
 from deckdown.extractors.context import ExtractContext
 from deckdown.extractors.handlers.base import ShapeHandler
 from deckdown.extractors.utils import extract_text_payload
@@ -55,7 +63,9 @@ class BasicShapeHandler(ShapeHandler):
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[BasicShape]:  # noqa: ANN401
         bbox = ctx.bbox_for_shape(shape)
-        geom = str(getattr(getattr(shape, "auto_shape_type", None), "name", None) or "autoShape").lower()
+        geom = str(
+            getattr(getattr(shape, "auto_shape_type", None), "name", None) or "autoShape"
+        ).lower()
         style = _basic_style(shape, ctx)
         text_payload: TextPayload | None = None
         if getattr(shape, "has_text_frame", False):
