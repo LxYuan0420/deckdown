@@ -164,7 +164,12 @@ class LineShape(ShapeBase):
     style: Optional[BasicStyle] = None
 
 
-Shape = TextShape | PictureShape | TableShape | ChartShape | BasicShape | LineShape
+class GroupShape(ShapeBase):
+    kind: Literal[ShapeKind.GROUP]
+    children: tuple[str, ...]
+
+
+Shape = TextShape | PictureShape | TableShape | ChartShape | BasicShape | LineShape | GroupShape
 
 
 class SlideSize(_FrozenModel):

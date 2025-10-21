@@ -120,15 +120,25 @@ class AstExtractor:
                 BasicShapeHandler(),
                 TextShapeHandler(),
             )
+            from deckdown.extractors.group import GroupExtractor
+            group_extractor = GroupExtractor(handlers=handlers)
             out_h: dict[int, SlideDoc] = {}
             for idx, slide in enumerate(prs.slides, start=1):
                 built_shapes: list[Shape] = []
-                for z, shp in enumerate(slide.shapes):
+                z = 0
+                for shp in slide.shapes:
+                    # Group handling (DFS): container + children with absolute coords
+                    if getattr(shp, "shape_type", None) == MSO_SHAPE_TYPE.GROUP:
+                        children, z, group_shape = group_extractor.extract(shp, z_start=z, ctx=ctx)
+                        built_shapes.append(group_shape)
+                        built_shapes.extend(children)
+                        continue
                     for handler in handlers:
                         if handler.supports(shp):
                             shape_obj = handler.build(shp, z=z, ctx=ctx)
                             if shape_obj is not None:
                                 built_shapes.append(shape_obj)
+                            z += 1
                             break
                 out_h[idx] = SlideDoc(slide=SlideModel(index=idx, size=size, shapes=tuple(built_shapes)))
             return out_h
