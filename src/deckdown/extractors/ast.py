@@ -109,8 +109,9 @@ class AstExtractor:
             from deckdown.extractors.handlers.picture_handler import PictureShapeHandler
             from deckdown.extractors.handlers.basic_line_handler import BasicShapeHandler, LineShapeHandler
             from deckdown.extractors.handlers.text_handler import TextShapeHandler
+            from deckdown.color.theme import ThemeResolver
 
-            ctx = ExtractContext(size=size)
+            ctx = ExtractContext(size=size, theme=ThemeResolver.from_presentation(prs))
             handlers: tuple[ShapeHandler, ...] = (
                 TableShapeHandler(),
                 ChartShapeHandler(),

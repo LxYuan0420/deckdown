@@ -68,7 +68,7 @@ class TableShapeHandler(ShapeHandler):
                         if rr == r and cc == c:
                             continue
                         visited.add((rr, cc))
-                text: TextPayload = extract_text_payload(tbl.cell(r, c).text_frame)
+                text: TextPayload = extract_text_payload(tbl.cell(r, c).text_frame, ctx.theme)
                 out_cells.append(TableCell(r=r, c=c, rowspan=rowspan, colspan=colspan, text=text))
 
         payload = TablePayload(rows=n_rows, cols=n_cols, cells=tuple(out_cells))
@@ -81,4 +81,3 @@ class TableShapeHandler(ShapeHandler):
             rotation=None,
             table=payload,
         )
-

@@ -10,27 +10,28 @@ from deckdown.extractors.handlers.base import ShapeHandler
 from deckdown.extractors.utils import extract_text_payload
 
 
-def _color_from_fill(fill: Any) -> dict | None:  # noqa: ANN401
+def _color_from_fill(fill: Any, ctx: ExtractContext) -> dict | None:  # noqa: ANN401
     try:
         fc = getattr(fill, "fore_color", None)
-        rgb = getattr(fc, "rgb", None)
-        if rgb is not None:
-            return {"resolved_rgb": f"#{str(rgb)}"}
+        if fc is not None:
+            data = ctx.theme.color_dict_from_colorformat(fc)
+            if data:
+                return data
     except Exception:
         return None
     return None
 
 
-def _basic_style(shp: Any) -> BasicStyle | None:  # noqa: ANN401
+def _basic_style(shp: Any, ctx: ExtractContext) -> BasicStyle | None:  # noqa: ANN401
     try:
-        fill_color = _color_from_fill(getattr(shp, "fill", None))
+        fill_color = _color_from_fill(getattr(shp, "fill", None), ctx)
         line = getattr(shp, "line", None)
         stroke_color = None
         width_pt = None
         dash = None
         if line is not None:
             try:
-                stroke_color = _color_from_fill(getattr(line, "fill", None))
+                stroke_color = _color_from_fill(getattr(line, "fill", None), ctx)
             except Exception:
                 pass
             try:
@@ -60,10 +61,10 @@ class BasicShapeHandler(ShapeHandler):
             height_emu=int(getattr(shape, "height", 0)),
         )
         geom = str(getattr(getattr(shape, "auto_shape_type", None), "name", None) or "autoShape").lower()
-        style = _basic_style(shape)
+        style = _basic_style(shape, ctx)
         text_payload: TextPayload | None = None
         if getattr(shape, "has_text_frame", False):
-            text_payload = extract_text_payload(shape.text_frame)
+            text_payload = extract_text_payload(shape.text_frame, ctx.theme)
         rot = None
         try:
             rot = float(getattr(shape, "rotation"))  # type: ignore[arg-type]
@@ -93,7 +94,7 @@ class LineShapeHandler(ShapeHandler):
             width_emu=int(getattr(shape, "width", 0)),
             height_emu=int(getattr(shape, "height", 0)),
         )
-        style = _basic_style(shape)
+        style = _basic_style(shape, ctx)
         rot = None
         try:
             rot = float(getattr(shape, "rotation"))  # type: ignore[arg-type]
@@ -108,4 +109,3 @@ class LineShapeHandler(ShapeHandler):
             rotation=rot,
             style=style,
         )
-

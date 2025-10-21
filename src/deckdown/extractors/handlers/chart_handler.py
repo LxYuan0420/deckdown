@@ -51,9 +51,9 @@ class ChartShapeHandler(ShapeHandler):
                 color = None
                 try:
                     f = ser.format.fill
-                    rgb = getattr(getattr(f, "fore_color", None), "rgb", None)
-                    if rgb is not None:
-                        color = {"resolved_rgb": f"#{str(rgb)}"}
+                    fc = getattr(f, "fore_color", None)
+                    if fc is not None:
+                        color = ctx.theme.color_dict_from_colorformat(fc)
                 except Exception:
                     color = None
                 series_out.append(ChartSeriesModel(name=name, values=vals, color=color))
@@ -74,4 +74,3 @@ class ChartShapeHandler(ShapeHandler):
             rotation=None,
             chart=ChartPayload(type=ctype or "unknown", categories=tuple(cats), series=tuple(series_out), plot_area=plot_area),
         )
-

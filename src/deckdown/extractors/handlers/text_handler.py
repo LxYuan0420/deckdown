@@ -24,7 +24,7 @@ class TextShapeHandler(ShapeHandler):
             width_emu=int(getattr(shape, "width", 0)),
             height_emu=int(getattr(shape, "height", 0)),
         )
-        text: TextPayload = extract_text_payload(shape.text_frame)
+        text: TextPayload = extract_text_payload(shape.text_frame, ctx.theme)
         rot = None
         try:
             rot = float(getattr(shape, "rotation"))  # type: ignore[arg-type]
@@ -39,4 +39,3 @@ class TextShapeHandler(ShapeHandler):
             rotation=rot,
             text=text,
         )
-

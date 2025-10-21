@@ -64,4 +64,3 @@ class PictureShapeHandler(ShapeHandler):
             rotation=rot,
             image=payload,
         )
-

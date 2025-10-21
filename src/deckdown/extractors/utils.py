@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from deckdown.ast import Paragraph, TextPayload, TextRun
+from deckdown.color.theme import ThemeResolver
 
 
 def align_to_str(align: Any) -> str | None:  # noqa: ANN401
@@ -14,18 +15,20 @@ def align_to_str(align: Any) -> str | None:  # noqa: ANN401
     return low if low in {"left", "center", "right", "justify"} else None
 
 
-def color_dict_from_font(font: Any) -> dict | None:  # noqa: ANN401
+def color_dict_from_font(font: Any, theme: ThemeResolver) -> dict | None:  # noqa: ANN401
     try:
         col = getattr(font, "color", None)
-        rgb = getattr(col, "rgb", None)
-        if rgb is not None:
-            return {"resolved_rgb": f"#{str(rgb)}"}
+        if col is None:
+            return None
+        data = theme.color_dict_from_colorformat(col)
+        if data:
+            return data
     except Exception:
         return None
     return None
 
 
-def extract_text_payload(text_frame: Any) -> TextPayload:  # noqa: ANN401
+def extract_text_payload(text_frame: Any, theme: ThemeResolver) -> TextPayload:  # noqa: ANN401
     paras: list[Paragraph] = []
     try:
         for p in text_frame.paragraphs:
@@ -46,7 +49,7 @@ def extract_text_payload(text_frame: Any) -> TextPayload:  # noqa: ANN401
                     font["italic"] = bool(f.italic)
                 if f is not None and f.underline is not None:
                     font["underline"] = bool(f.underline)
-                c = color_dict_from_font(f)
+                c = color_dict_from_font(f, theme)
                 if c:
                     font["color"] = c
                 runs.append(TextRun(text=r.text or "", font=font or None))
@@ -60,4 +63,3 @@ def extract_text_payload(text_frame: Any) -> TextPayload:  # noqa: ANN401
     except Exception:  # pragma: no cover
         pass
     return TextPayload(paras=tuple(paras))
-
