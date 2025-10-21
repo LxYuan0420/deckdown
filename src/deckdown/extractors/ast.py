@@ -134,7 +134,33 @@ class AstExtractor:
                         if blob:
                             b64 = base64.b64encode(blob).decode("ascii")
                             data_url = f"data:{content_type};base64,{b64}"
-                        payload = PicturePayload(media=Media(data_url=data_url))
+
+                        # Cropping (fractions 0..1) if non-zero
+                        crop_dict: dict[str, float] = {}
+                        try:
+                            cl = float(getattr(shp, "crop_left", 0.0) or 0.0)
+                            cr = float(getattr(shp, "crop_right", 0.0) or 0.0)
+                            ct = float(getattr(shp, "crop_top", 0.0) or 0.0)
+                            cb = float(getattr(shp, "crop_bottom", 0.0) or 0.0)
+                            if any(v != 0.0 for v in (cl, cr, ct, cb)):
+                                crop_dict = {"left": cl, "right": cr, "top": ct, "bottom": cb}
+                        except Exception:  # pragma: no cover - defensive
+                            crop_dict = {}
+
+                        alt = None
+                        try:
+                            alt = getattr(shp, "alternative_text", None)
+                            if alt:
+                                alt = str(alt)
+                        except Exception:  # pragma: no cover
+                            alt = None
+
+                        payload = PicturePayload(
+                            media=Media(data_url=data_url),
+                            crop=crop_dict or None,
+                            opacity=None,
+                            alt=alt,
+                        )
                         shapes.append(
                             PictureShape(
                                 id=f"s{getattr(shp, 'shape_id', z)}",
@@ -155,4 +181,3 @@ class AstExtractor:
             slide_model = SlideModel(index=idx, size=size, shapes=tuple(shapes))
             out[idx] = SlideDoc(slide=slide_model)
         return out
-

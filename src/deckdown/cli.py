@@ -10,6 +10,7 @@ from deckdown.io import OutputManager
 from deckdown.loader import Loader
 from deckdown.renderers.markdown import MarkdownRenderer
 from deckdown.extractors.ast import AstExtractor
+from deckdown.validate import MarkdownValidator
 
 # Exit codes (align with implementation plan)
 EXIT_OK = 0
@@ -54,6 +55,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Include speaker notes (stub; ignored for now)",
     )
 
+    p_validate = sub.add_parser(
+        "validate",
+        help="Validate a markdown file containing deckdown JSON blocks",
+    )
+    p_validate.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
+
     return parser
 
 
@@ -93,6 +100,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if ns.command == "extract":
         return _cmd_extract(ns)
+    if ns.command == "validate":
+        in_path = Path(ns.input)
+        if not in_path.exists() or in_path.is_dir():
+            print(f"error: input markdown not found: {in_path}", file=sys.stderr)
+            return EXIT_INPUT_ERROR
+        errs = MarkdownValidator().validate_file(in_path)
+        if errs:
+            for e in errs:
+                print(f"validate: {e}", file=sys.stderr)
+            return 6
+        return EXIT_OK
     # Future subcommands can be added here.
     return EXIT_USAGE  # pragma: no cover (argparse enforces subcommands)
 
