@@ -9,7 +9,9 @@ from pptx import Presentation
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE, MSO_CONNECTOR_TYPE
 from pptx.util import Emu
 
-from deckdown.ast import BasicShape, LineShape, PictureShape, SlideDoc, TableShape, TextShape
+from deckdown.ast import BasicShape, LineShape, PictureShape, SlideDoc, TableShape, TextShape, ChartShape
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,8 @@ class DeckAssembler:
                     self._add_basic(s, sh)
                 elif isinstance(sh, LineShape):
                     self._add_line(s, sh)
+                elif isinstance(sh, ChartShape):
+                    self._add_chart(s, sh)
 
         prs.save(str(out))
 
@@ -143,3 +147,65 @@ class DeckAssembler:
         x1 = Emu(sh.bbox.x_emu); y1 = Emu(sh.bbox.y_emu)
         x2 = Emu(sh.bbox.x_emu + sh.bbox.w_emu); y2 = Emu(sh.bbox.y_emu + sh.bbox.h_emu)
         slide.shapes.add_connector(MSO_CONNECTOR_TYPE.STRAIGHT, x1, y1, x2, y2)
+
+    def _add_chart(self, slide, sh: ChartShape) -> None:  # noqa: ANN001
+        ct = (sh.chart.type or "unknown").lower()
+        ctype_map = {
+            "column": XL_CHART_TYPE.COLUMN_CLUSTERED,
+            "bar": XL_CHART_TYPE.BAR_CLUSTERED,
+            "line": XL_CHART_TYPE.LINE,
+            "pie": XL_CHART_TYPE.PIE,
+            "donut": XL_CHART_TYPE.DOUGHNUT,
+        }
+        xl_type = ctype_map.get(ct, XL_CHART_TYPE.COLUMN_CLUSTERED)
+
+        # Build data
+        data = CategoryChartData()
+        data.categories = list(sh.chart.categories or [])
+        for ser in sh.chart.series or ():
+            name = ser.name or "Series"
+            values = [v if v is not None else 0 for v in (ser.values or ())]
+            data.add_series(name, values)
+
+        left = Emu(sh.bbox.x_emu); top = Emu(sh.bbox.y_emu); width = Emu(sh.bbox.w_emu); height = Emu(sh.bbox.h_emu)
+        chart = slide.shapes.add_chart(xl_type, left, top, width, height, data).chart
+
+        # Legend and data labels
+        if sh.chart.plot_area:
+            has_labels = bool(sh.chart.plot_area.get("has_data_labels", False))
+            if chart.plots:
+                try:
+                    chart.plots[0].has_data_labels = has_labels
+                except Exception:
+                    pass
+            has_legend = bool(sh.chart.plot_area.get("has_legend", False))
+            chart.has_legend = has_legend
+            pos = (sh.chart.plot_area.get("legend_pos") or "").lower()
+            pos_map = {
+                "right": XL_LEGEND_POSITION.RIGHT,
+                "left": XL_LEGEND_POSITION.LEFT,
+                "top": XL_LEGEND_POSITION.TOP,
+                "bottom": XL_LEGEND_POSITION.BOTTOM,
+            }
+            if has_legend and pos in pos_map:
+                try:
+                    chart.legend.position = pos_map[pos]
+                except Exception:
+                    pass
+
+        # Series colors (explicit only)
+        try:
+            plot0 = chart.plots[0]
+            for i, ser in enumerate((sh.chart.series or ())):
+                if not ser.color or not ser.color.get("resolved_rgb"):
+                    continue
+                rgb = ser.color["resolved_rgb"][1:]
+                chart_ser = plot0.series[i]
+                chart_ser.format.fill.solid()
+                from pptx.dml.color import RGBColor
+
+                chart_ser.format.fill.fore_color.rgb = RGBColor(
+                    int(rgb[0:2], 16), int(rgb[2:4], 16), int(rgb[4:6], 16)
+                )
+        except Exception:
+            pass
