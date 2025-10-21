@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+import json
 
 from deckdown.models import Deck, Slide, Table
 
@@ -12,7 +13,7 @@ __all__ = ["MarkdownRenderer"]
 class MarkdownRenderer:
     indent_unit: str = "  "  # two spaces per level
 
-    def render(self, deck: Deck) -> str:
+    def render(self, deck: Deck, ast_per_slide: dict[int, dict] | None = None) -> str:
         lines: list[str] = []
         heading = self._basename(deck.file) or deck.title or "Untitled Deck"
         lines.append(f"# {heading}")
@@ -20,6 +21,13 @@ class MarkdownRenderer:
 
         for slide in deck.slides:
             self._render_slide(slide, lines)
+            # Append AST (authoritative) if provided
+            if ast_per_slide is not None and slide.index in ast_per_slide:
+                lines.append("---")
+                lines.append("```json")
+                lines.append(self._dump_json(ast_per_slide[slide.index]))
+                lines.append("```")
+                lines.append("")
 
         # Trim trailing blank lines and ensure a single trailing newline
         while lines and lines[-1] == "":
@@ -125,3 +133,7 @@ class MarkdownRenderer:
     def _basename(path: str) -> str:
         base = os.path.basename(path)
         return base[:-5] if base.lower().endswith(".pptx") else base
+
+    @staticmethod
+    def _dump_json(obj: dict) -> str:
+        return json.dumps(obj, ensure_ascii=False, indent=2, sort_keys=False)
