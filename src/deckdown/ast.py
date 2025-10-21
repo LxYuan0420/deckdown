@@ -115,6 +115,32 @@ class TableShape(ShapeBase):
 Shape = TextShape | PictureShape | TableShape
 
 
+class ChartSeriesModel(_FrozenModel):
+    name: Optional[str] = None
+    values: tuple[float | None, ...] = ()
+    color: Optional[Color] = None
+    points: Optional[tuple[dict, ...]] = None
+
+
+class ChartPayload(_FrozenModel):
+    type: str
+    subtype: Optional[str] = None
+    categories: tuple[str | float, ...] = ()
+    series: tuple[ChartSeriesModel, ...] = ()
+    plot_area: Optional[dict] = None  # { has_data_labels?, has_legend?, legend_pos? }
+    axes: Optional[dict] = None
+    style: Optional[int] = None
+    snapshot: Optional[Media] = None
+
+
+class ChartShape(ShapeBase):
+    kind: Literal[ShapeKind.CHART]
+    chart: ChartPayload
+
+
+Shape = TextShape | PictureShape | TableShape | ChartShape
+
+
 class SlideSize(_FrozenModel):
     width_emu: int
     height_emu: int

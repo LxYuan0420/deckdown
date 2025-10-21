@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.enum.chart import XL_CHART_TYPE
 from pptx.oxml.ns import qn
 
 from deckdown.ast import (
@@ -13,6 +14,9 @@ from deckdown.ast import (
     Paragraph,
     PicturePayload,
     PictureShape,
+    ChartPayload,
+    ChartShape,
+    ChartSeriesModel,
     TableCell,
     TablePayload,
     TableShape,
@@ -271,7 +275,71 @@ class AstExtractor:
                 except Exception:  # pragma: no cover - defensive
                     pass
 
-                # Other kinds (charts, groups) will arrive in later milestones
+                # charts (core category charts)
+                try:
+                    if hasattr(shp, "has_chart") and getattr(shp, "has_chart"):
+                        ch = shp.chart
+                        ctype_enum = getattr(ch, "chart_type", None)
+                        ctype = None
+                        if ctype_enum is not None:
+                            # map broad families
+                            if ctype_enum in (XL_CHART_TYPE.COLUMN_CLUSTERED, XL_CHART_TYPE.COLUMN_STACKED, XL_CHART_TYPE.COLUMN_STACKED_100):
+                                ctype = "column"
+                            elif ctype_enum in (XL_CHART_TYPE.BAR_CLUSTERED, XL_CHART_TYPE.BAR_STACKED, XL_CHART_TYPE.BAR_STACKED_100):
+                                ctype = "bar"
+                            elif ctype_enum in (XL_CHART_TYPE.LINE, XL_CHART_TYPE.LINE_MARKERS):
+                                ctype = "line"
+                            elif ctype_enum in (XL_CHART_TYPE.PIE, XL_CHART_TYPE.DOUGHNUT):
+                                ctype = "pie" if ctype_enum == XL_CHART_TYPE.PIE else "donut"
+                            else:
+                                ctype = str(ctype_enum).split(" ")[0].lower()
+
+                        plots = list(ch.plots)
+                        cats: list[str | float] = []
+                        if plots:
+                            try:
+                                cats = list(plots[0].categories)
+                            except Exception:
+                                cats = []
+
+                        series_out: list[ChartSeriesModel] = []
+                        if plots:
+                            for ser in plots[0].series:
+                                name = getattr(ser, "name", None)
+                                vals = tuple(getattr(ser, "values", ()) or ())
+                                color = None
+                                try:
+                                    f = ser.format.fill
+                                    rgb = getattr(getattr(f, "fore_color", None), "rgb", None)
+                                    if rgb is not None:
+                                        color = {"resolved_rgb": f"#{str(rgb)}"}
+                                except Exception:
+                                    color = None
+                                series_out.append(ChartSeriesModel(name=name, values=vals, color=color))
+
+                        plot_area = {
+                            "has_data_labels": bool(getattr(plots[0], "has_data_labels", False)) if plots else False,
+                            "has_legend": bool(getattr(ch, "has_legend", False)),
+                        }
+                        if getattr(ch, "legend", None) is not None and getattr(ch.legend, "position", None) is not None:
+                            plot_area["legend_pos"] = str(ch.legend.position).split(" ")[0].lower()
+
+                        shapes.append(
+                            ChartShape(
+                                id=f"s{getattr(shp, 'shape_id', z)}",
+                                kind=ShapeKind.CHART,
+                                name=name,
+                                bbox=bbox,
+                                z=z,
+                                rotation=rot,
+                                chart=ChartPayload(type=ctype or "unknown", categories=tuple(cats), series=tuple(series_out), plot_area=plot_area),
+                            )
+                        )
+                        continue
+                except Exception:  # pragma: no cover - defensive
+                    pass
+
+                # Other kinds (groups) will arrive in later milestones
 
             slide_model = SlideModel(index=idx, size=size, shapes=tuple(shapes))
             out[idx] = SlideDoc(slide=slide_model)
