@@ -32,6 +32,10 @@ class ChartShapeHandler(ShapeHandler):
                 ctype = "line"
             elif ctype_enum in (XL_CHART_TYPE.PIE, XL_CHART_TYPE.DOUGHNUT):
                 ctype = "pie" if ctype_enum == XL_CHART_TYPE.PIE else "donut"
+            elif ctype_enum in (XL_CHART_TYPE.XY_SCATTER,):
+                ctype = "scatter"
+            elif ctype_enum in (XL_CHART_TYPE.BUBBLE,):
+                ctype = "bubble"
             else:
                 ctype = str(ctype_enum).split(" ")[0].lower()
 
@@ -48,6 +52,21 @@ class ChartShapeHandler(ShapeHandler):
             for ser in plots[0].series:
                 name = getattr(ser, "name", None)
                 vals = tuple(getattr(ser, "values", ()) or ())
+                xvals = None
+                sizes = None
+                # scatter/bubble carry x and sizes
+                try:
+                    xv = getattr(ser, "x_values", None)
+                    if xv is not None:
+                        xvals = tuple(xv)
+                except Exception:
+                    xvals = None
+                try:
+                    bs = getattr(ser, "bubble_sizes", None)
+                    if bs is not None:
+                        sizes = tuple(bs)
+                except Exception:
+                    sizes = None
                 color = None
                 try:
                     f = ser.format.fill
@@ -70,7 +89,7 @@ class ChartShapeHandler(ShapeHandler):
                             points_meta.append({"idx": idx, "color": pc})
                 except Exception:
                     points_meta = []
-                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None))
+                series_out.append(ChartSeriesModel(name=name, values=vals, color=color, points=tuple(points_meta) if points_meta else None, x_values=xvals, sizes=sizes))
 
         plot_area = {
             "has_data_labels": bool(getattr(plots[0], "has_data_labels", False)) if plots else False,

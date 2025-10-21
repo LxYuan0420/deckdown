@@ -120,6 +120,8 @@ class ChartSeriesModel(_FrozenModel):
     values: tuple[float | None, ...] = ()
     color: Optional[Color] = None
     points: Optional[tuple[dict, ...]] = None
+    x_values: Optional[tuple[float | None, ...]] = None
+    sizes: Optional[tuple[float | None, ...]] = None
 
 
 class ChartPayload(_FrozenModel):

@@ -10,7 +10,7 @@ from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE, MSO_CONNECTOR_TYPE
 from pptx.util import Emu
 
 from deckdown.ast import BasicShape, LineShape, PictureShape, SlideDoc, TableShape, TextShape, ChartShape
-from pptx.chart.data import CategoryChartData
+from pptx.chart.data import CategoryChartData, XyChartData, BubbleChartData
 from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
 
 
@@ -234,16 +234,43 @@ class DeckAssembler:
             "line": XL_CHART_TYPE.LINE,
             "pie": XL_CHART_TYPE.PIE,
             "donut": XL_CHART_TYPE.DOUGHNUT,
+            "scatter": XL_CHART_TYPE.XY_SCATTER,
+            "bubble": XL_CHART_TYPE.BUBBLE,
         }
         xl_type = ctype_map.get(ct, XL_CHART_TYPE.COLUMN_CLUSTERED)
 
-        # Build data
-        data = CategoryChartData()
-        data.categories = list(sh.chart.categories or [])
-        for ser in sh.chart.series or ():
-            name = ser.name or "Series"
-            values = [v if v is not None else 0 for v in (ser.values or ())]
-            data.add_series(name, values)
+        # Build data by chart family
+        if xl_type in (XL_CHART_TYPE.XY_SCATTER,):
+            data = XyChartData()
+            for ser in sh.chart.series or ():
+                s = data.add_series(ser.name or "Series")
+                xs = list(ser.x_values or ())
+                ys = list(ser.values or ())
+                n = min(len(xs), len(ys))
+                for i in range(n):
+                    xv = xs[i] if xs[i] is not None else 0
+                    yv = ys[i] if ys[i] is not None else 0
+                    s.add_data_point(xv, yv)
+        elif xl_type in (XL_CHART_TYPE.BUBBLE,):
+            data = BubbleChartData()
+            for ser in sh.chart.series or ():
+                s = data.add_series(ser.name or "Series")
+                xs = list(ser.x_values or ())
+                ys = list(ser.values or ())
+                sz = list(ser.sizes or ())
+                n = min(len(xs), len(ys), len(sz) if sz else len(ys))
+                for i in range(n):
+                    xv = xs[i] if xs[i] is not None else 0
+                    yv = ys[i] if ys[i] is not None else 0
+                    rv = sz[i] if (sz and sz[i] is not None) else 1
+                    s.add_data_point(xv, yv, rv)
+        else:
+            data = CategoryChartData()
+            data.categories = list(sh.chart.categories or [])
+            for ser in sh.chart.series or ():
+                name = ser.name or "Series"
+                values = [v if v is not None else 0 for v in (ser.values or ())]
+                data.add_series(name, values)
 
         left = Emu(sh.bbox.x_emu); top = Emu(sh.bbox.y_emu); width = Emu(sh.bbox.w_emu); height = Emu(sh.bbox.h_emu)
         chart = slide.shapes.add_chart(xl_type, left, top, width, height, data).chart
