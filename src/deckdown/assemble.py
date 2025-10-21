@@ -25,7 +25,17 @@ class DeckAssembler:
             prs.part.drop_rel(rId)
             prs.slides._sldIdLst.remove(prs.slides._sldIdLst[0])  # type: ignore[attr-defined]
 
-        for doc in docs:
+        # Set deck slide size from first doc if present
+        docs_list = list(docs)
+        if docs_list:
+            first = docs_list[0]
+            try:
+                prs.slide_width = Emu(first.slide.size.width_emu)
+                prs.slide_height = Emu(first.slide.size.height_emu)
+            except Exception:
+                pass
+
+        for doc in docs_list:
             s = prs.slides.add_slide(blank)
             # Note: slide size is a deck-level setting in PPTX; we keep default for now.
             for sh in doc.slide.shapes:

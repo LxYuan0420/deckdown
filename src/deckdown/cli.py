@@ -13,6 +13,7 @@ from deckdown.extractors.ast import AstExtractor
 from deckdown.validate import MarkdownValidator
 from deckdown.reader import MarkdownReader
 from deckdown.assemble import DeckAssembler
+from deckdown.preview.html import HtmlPreviewRenderer
 
 # Exit codes (align with implementation plan)
 EXIT_OK = 0
@@ -69,6 +70,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_assemble.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
     p_assemble.add_argument("-o", "--output", dest="output", required=True, help="Output PPTX path")
+
+    p_preview = sub.add_parser(
+        "preview",
+        help="Render an HTML preview from a markdown file containing deckdown JSON blocks",
+    )
+    p_preview.add_argument("input", metavar="INPUT.md", help="Path to input .md file")
+    p_preview.add_argument("-o", "--output", dest="output", required=True, help="Output HTML path")
 
     return parser
 
@@ -128,6 +136,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return EXIT_INPUT_ERROR
         docs = MarkdownReader().load_file(in_path)
         DeckAssembler().assemble(docs, out=out_path)
+        return EXIT_OK
+    if ns.command == "preview":
+        in_path = Path(ns.input)
+        out_path = Path(ns.output)
+        if not in_path.exists() or in_path.is_dir():
+            print(f"error: input markdown not found: {in_path}", file=sys.stderr)
+            return EXIT_INPUT_ERROR
+        docs = MarkdownReader().load_file(in_path)
+        html = HtmlPreviewRenderer().render_deck(docs)
+        out_path.write_text(html, encoding="utf-8")
         return EXIT_OK
     # Future subcommands can be added here.
     return EXIT_USAGE  # pragma: no cover (argparse enforces subcommands)
