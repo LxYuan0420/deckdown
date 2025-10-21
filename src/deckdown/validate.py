@@ -83,4 +83,21 @@ class MarkdownValidator:
                 for ser in sh.chart.series or ():
                     if len(ser.values or ()) != len(cats):
                         errs.append(f"chart series length != categories for shape {sh.id}")
+        # groups: child ids should exist; child's group must match its container id
+        id_to_shape = {sh.id: sh for sh in slide.shapes}
+        for sh in slide.shapes:
+            if getattr(sh, "kind", None) and getattr(sh, "kind").value == "group":
+                for cid in getattr(sh, "children", ()):  # type: ignore[attr-defined]
+                    if cid not in id_to_shape:
+                        errs.append(f"group {sh.id} references missing child id {cid}")
+                    else:
+                        child = id_to_shape[cid]
+                        if getattr(child, "group", None) != sh.id:
+                            errs.append(f"child {cid} missing group backlink to {sh.id}")
+        # orphan shapes with group value that doesn't exist
+        group_ids = {sh.id for sh in slide.shapes if getattr(sh, "kind", None) and getattr(sh, "kind").value == "group"}
+        for sh in slide.shapes:
+            g = getattr(sh, "group", None)
+            if g and g not in group_ids:
+                errs.append(f"shape {sh.id} has non-existent group id {g}")
         return errs
