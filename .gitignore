@@ -38,3 +38,4 @@ dist/
 # Ignore root-level Markdown files (docs) except README.md
 /*.md
 !/README.md
+tmp_chart*.pptx

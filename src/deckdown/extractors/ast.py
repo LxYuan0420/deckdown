@@ -100,6 +100,40 @@ class AstExtractor:
         width = int(getattr(prs, "slide_width"))
         height = int(getattr(prs, "slide_height"))
         size = SlideSize(width_emu=width, height_emu=height)
+        # New handler-driven path for clarity and SOLID responsibilities
+        try:
+            from deckdown.extractors.context import ExtractContext  # local import to avoid cycles
+            from deckdown.extractors.handlers.base import ShapeHandler
+            from deckdown.extractors.handlers.table_handler import TableShapeHandler
+            from deckdown.extractors.handlers.chart_handler import ChartShapeHandler
+            from deckdown.extractors.handlers.picture_handler import PictureShapeHandler
+            from deckdown.extractors.handlers.basic_line_handler import BasicShapeHandler, LineShapeHandler
+            from deckdown.extractors.handlers.text_handler import TextShapeHandler
+
+            ctx = ExtractContext(size=size)
+            handlers: tuple[ShapeHandler, ...] = (
+                TableShapeHandler(),
+                ChartShapeHandler(),
+                PictureShapeHandler(),
+                LineShapeHandler(),
+                BasicShapeHandler(),
+                TextShapeHandler(),
+            )
+            out_h: dict[int, SlideDoc] = {}
+            for idx, slide in enumerate(prs.slides, start=1):
+                built_shapes: list[Shape] = []
+                for z, shp in enumerate(slide.shapes):
+                    for handler in handlers:
+                        if handler.supports(shp):
+                            shape_obj = handler.build(shp, z=z, ctx=ctx)
+                            if shape_obj is not None:
+                                built_shapes.append(shape_obj)
+                            break
+                out_h[idx] = SlideDoc(slide=SlideModel(index=idx, size=size, shapes=tuple(built_shapes)))
+            return out_h
+        except Exception:
+            # Fall back to legacy in-file implementation if handlers are unavailable
+            pass
         out: dict[int, SlideDoc] = {}
         for idx, slide in enumerate(prs.slides, start=1):
             shapes: list[Shape] = []
