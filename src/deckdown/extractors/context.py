@@ -28,3 +28,10 @@ class ExtractContext:
     def with_offset(self, dx_emu: int, dy_emu: int) -> "ExtractContext":
         # For grouped shapes (future): an offset-aware context
         return ExtractContext(size=self.size, theme=self.theme)
+
+    def bbox_for_shape(self, shape: object) -> BBox:
+        left = int(getattr(shape, "left", 0))
+        top = int(getattr(shape, "top", 0))
+        width = int(getattr(shape, "width", 0))
+        height = int(getattr(shape, "height", 0))
+        return self.bbox(left_emu=left, top_emu=top, width_emu=width, height_emu=height)

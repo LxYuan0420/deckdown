@@ -54,12 +54,7 @@ class BasicShapeHandler(ShapeHandler):
         return getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.AUTO_SHAPE
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[BasicShape]:  # noqa: ANN401
-        bbox = ctx.bbox(
-            left_emu=int(getattr(shape, "left", 0)),
-            top_emu=int(getattr(shape, "top", 0)),
-            width_emu=int(getattr(shape, "width", 0)),
-            height_emu=int(getattr(shape, "height", 0)),
-        )
+        bbox = ctx.bbox_for_shape(shape)
         geom = str(getattr(getattr(shape, "auto_shape_type", None), "name", None) or "autoShape").lower()
         style = _basic_style(shape, ctx)
         text_payload: TextPayload | None = None
@@ -88,12 +83,7 @@ class LineShapeHandler(ShapeHandler):
         return getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.LINE
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[LineShape]:  # noqa: ANN401
-        bbox = ctx.bbox(
-            left_emu=int(getattr(shape, "left", 0)),
-            top_emu=int(getattr(shape, "top", 0)),
-            width_emu=int(getattr(shape, "width", 0)),
-            height_emu=int(getattr(shape, "height", 0)),
-        )
+        bbox = ctx.bbox_for_shape(shape)
         style = _basic_style(shape, ctx)
         rot = None
         try:

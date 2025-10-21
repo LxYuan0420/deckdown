@@ -18,12 +18,7 @@ class TextShapeHandler(ShapeHandler):
         return bool(getattr(shape, "has_text_frame", False))
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[TextShape]:  # noqa: ANN401
-        bbox = ctx.bbox(
-            left_emu=int(getattr(shape, "left", 0)),
-            top_emu=int(getattr(shape, "top", 0)),
-            width_emu=int(getattr(shape, "width", 0)),
-            height_emu=int(getattr(shape, "height", 0)),
-        )
+        bbox = ctx.bbox_for_shape(shape)
         text: TextPayload = extract_text_payload(shape.text_frame, ctx.theme)
         rot = None
         try:

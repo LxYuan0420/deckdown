@@ -15,12 +15,7 @@ class PictureShapeHandler(ShapeHandler):
         return getattr(shape, "shape_type", None) == MSO_SHAPE_TYPE.PICTURE
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[PictureShape]:  # noqa: ANN401
-        bbox = ctx.bbox(
-            left_emu=int(getattr(shape, "left", 0)),
-            top_emu=int(getattr(shape, "top", 0)),
-            width_emu=int(getattr(shape, "width", 0)),
-            height_emu=int(getattr(shape, "height", 0)),
-        )
+        bbox = ctx.bbox_for_shape(shape)
         # data URL
         data_url = None
         try:

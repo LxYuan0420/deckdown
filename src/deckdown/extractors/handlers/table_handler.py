@@ -18,12 +18,7 @@ class TableShapeHandler(ShapeHandler):
         )
 
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[TableShape]:  # noqa: ANN401
-        bbox = ctx.bbox(
-            left_emu=int(getattr(shape, "left", 0)),
-            top_emu=int(getattr(shape, "top", 0)),
-            width_emu=int(getattr(shape, "width", 0)),
-            height_emu=int(getattr(shape, "height", 0)),
-        )
+        bbox = ctx.bbox_for_shape(shape)
         tbl = shape.table
         n_rows = len(tbl.rows)
         n_cols = len(tbl.columns)
