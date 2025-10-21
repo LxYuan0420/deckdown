@@ -17,6 +17,11 @@ from deckdown.ast import (
     ChartPayload,
     ChartShape,
     ChartSeriesModel,
+    BasicStyle,
+    FillSpec,
+    StrokeSpec,
+    BasicShape,
+    LineShape,
     TableCell,
     TablePayload,
     TableShape,
@@ -48,6 +53,44 @@ def _align_to_str(align: Any) -> str | None:  # noqa: ANN401
     m = name.lower()
     if m in {"left", "center", "right", "justify"}:
         return m
+    return None
+
+
+def _color_from_fill(fill: Any) -> dict | None:  # noqa: ANN401
+    try:
+        fc = getattr(fill, "fore_color", None)
+        rgb = getattr(fc, "rgb", None)
+        if rgb is not None:
+            return {"resolved_rgb": f"#{str(rgb)}"}
+    except Exception:
+        return None
+    return None
+
+
+def _basic_style(shp: Any) -> BasicStyle | None:  # noqa: ANN401
+    try:
+        fill_color = _color_from_fill(getattr(shp, "fill", None))
+        line = getattr(shp, "line", None)
+        stroke_color = None
+        width_pt = None
+        dash = None
+        if line is not None:
+            try:
+                stroke_color = _color_from_fill(getattr(line, "fill", None))
+            except Exception:
+                pass
+            try:
+                if getattr(line, "width", None) is not None:
+                    width_pt = round(float(line.width.pt), 2)  # type: ignore[union-attr]
+            except Exception:
+                pass
+        if fill_color or stroke_color or width_pt:
+            return BasicStyle(
+                fill=FillSpec(color=fill_color) if fill_color else None,
+                stroke=StrokeSpec(color=stroke_color, width_pt=width_pt, dash=dash),
+            )
+    except Exception:
+        return None
     return None
 
 
@@ -83,8 +126,12 @@ class AstExtractor:
                 except Exception:  # pragma: no cover - not all shapes support rotation
                     rot = None
 
-                # text shapes
-                if getattr(shp, "has_text_frame", False):
+                # generic text shapes (non-auto shapes/lines/tables/pictures/charts)
+                if getattr(shp, "has_text_frame", False) and getattr(shp, "shape_type", None) not in (
+                    MSO_SHAPE_TYPE.AUTO_SHAPE,
+                    MSO_SHAPE_TYPE.TABLE,
+                    MSO_SHAPE_TYPE.LINE,
+                ):
                     paras = []
                     try:
                         for p in shp.text_frame.paragraphs:
@@ -337,6 +384,56 @@ class AstExtractor:
                         )
                         continue
                 except Exception:  # pragma: no cover - defensive
+                    pass
+
+                # basic shapes and lines
+                try:
+                    st = getattr(shp, "shape_type", None)
+                    # auto shapes
+                    if st == MSO_SHAPE_TYPE.AUTO_SHAPE:
+                        geom = str(getattr(getattr(shp, "auto_shape_type", None), "name", None) or "autoShape").lower()
+                        style = _basic_style(shp)
+                        text_payload = None
+                        if getattr(shp, "has_text_frame", False):
+                            # reuse paragraph extraction for shapes with text
+                            paras = []
+                            try:
+                                for p in shp.text_frame.paragraphs:
+                                    runs = [TextRun(text=(r.text or "")) for r in p.runs]
+                                    paras.append(Paragraph(lvl=int(getattr(p, "level", 0) or 0), runs=tuple(runs)))
+                            except Exception:
+                                pass
+                            text_payload = TextPayload(paras=tuple(paras))
+                        shapes.append(
+                            BasicShape(
+                                id=f"s{getattr(shp, 'shape_id', z)}",
+                                kind=ShapeKind.BASIC,
+                                name=name,
+                                bbox=bbox,
+                                z=z,
+                                rotation=rot,
+                                geom=geom,
+                                style=style,
+                                text=text_payload,
+                            )
+                        )
+                        continue
+                    # lines
+                    if st == MSO_SHAPE_TYPE.LINE:
+                        style = _basic_style(shp)
+                        shapes.append(
+                            LineShape(
+                                id=f"s{getattr(shp, 'shape_id', z)}",
+                                kind=ShapeKind.LINE,
+                                name=name,
+                                bbox=bbox,
+                                z=z,
+                                rotation=rot,
+                                style=style,
+                            )
+                        )
+                        continue
+                except Exception:
                     pass
 
                 # Other kinds (groups) will arrive in later milestones

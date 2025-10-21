@@ -137,8 +137,34 @@ class ChartShape(ShapeBase):
     kind: Literal[ShapeKind.CHART]
     chart: ChartPayload
 
+class StrokeSpec(_FrozenModel):
+    color: Optional[Color] = None
+    width_pt: Optional[float] = None
+    dash: Optional[str] = None
 
-Shape = TextShape | PictureShape | TableShape | ChartShape
+
+class FillSpec(_FrozenModel):
+    color: Optional[Color] = None
+
+
+class BasicStyle(_FrozenModel):
+    fill: Optional[FillSpec] = None
+    stroke: Optional[StrokeSpec] = None
+
+
+class BasicShape(ShapeBase):
+    kind: Literal[ShapeKind.BASIC]
+    geom: Optional[str] = None
+    style: Optional[BasicStyle] = None
+    text: Optional[TextPayload] = None
+
+
+class LineShape(ShapeBase):
+    kind: Literal[ShapeKind.LINE]
+    style: Optional[BasicStyle] = None
+
+
+Shape = TextShape | PictureShape | TableShape | ChartShape | BasicShape | LineShape
 
 
 class SlideSize(_FrozenModel):
