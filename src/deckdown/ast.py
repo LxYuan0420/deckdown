@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,11 +10,33 @@ class _FrozenModel(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+class _DictLikeFrozenModel(_FrozenModel):
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.model_dump().get(key, default)
+
+    def items(self):
+        return self.model_dump().items()
+
+    def keys(self):
+        return self.model_dump().keys()
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.model_dump()
+
+    def __getitem__(self, key: str) -> Any:
+        return self.model_dump()[key]
+
+
+class ThemeRef(_FrozenModel):
+    key: str
+    tint: Optional[float] = Field(default=None, ge=-1.0, le=1.0)
+
+
 class Color(_FrozenModel):
     resolved_rgb: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
     model: Literal["srgb"] = "srgb"
     alpha: Optional[float] = None
-    theme_ref: Optional[dict] = None  # { key: "accent1|...", tint?: float }
+    theme_ref: Optional[ThemeRef] = None
 
 
 class Media(_FrozenModel):
@@ -33,9 +55,18 @@ class BBox(_FrozenModel):
     h_norm: float
 
 
+class FontSpec(_FrozenModel):
+    family: Optional[str] = None
+    size_pt: Optional[float] = None
+    bold: Optional[bool] = None
+    italic: Optional[bool] = None
+    underline: Optional[bool] = None
+    color: Optional[Color] = None
+
+
 class TextRun(_FrozenModel):
     text: str
-    font: Optional[dict] = None  # { family?, size_pt?, bold?, italic?, underline?, color? }
+    font: Optional[FontSpec] = None
 
 
 class Paragraph(_FrozenModel):
@@ -78,69 +109,23 @@ class TextShape(ShapeBase):
     text: TextPayload
 
 
+class CropSpec(_FrozenModel):
+    left: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    right: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    top: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    bottom: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+
+
 class PicturePayload(_FrozenModel):
     media: Media
-    crop: Optional[dict] = None  # { left,right,top,bottom } (0–1)
-    opacity: Optional[float] = None
+    crop: Optional[CropSpec] = None
+    opacity: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     alt: Optional[str] = None
 
 
 class PictureShape(ShapeBase):
     kind: Literal[ShapeKind.PICTURE]
     image: PicturePayload
-
-
-class TableCell(_FrozenModel):
-    r: int
-    c: int
-    rowspan: int = 1
-    colspan: int = 1
-    text: TextPayload = Field(default_factory=TextPayload)
-    fill: Optional[Color] = None
-    borders: Optional[dict] = None  # future: left/right/top/bottom
-
-
-class TablePayload(_FrozenModel):
-    rows: int
-    cols: int
-    cells: tuple[TableCell, ...] = ()
-    header_row: Optional[bool] = None
-
-
-class TableShape(ShapeBase):
-    kind: Literal[ShapeKind.TABLE]
-    table: TablePayload
-
-
-Shape = TextShape | PictureShape | TableShape
-
-
-class ChartSeriesModel(_FrozenModel):
-    name: Optional[str] = None
-    values: tuple[float | None, ...] = ()
-    color: Optional[Color] = None
-    points: Optional[tuple[dict, ...]] = None
-    x_values: Optional[tuple[float | None, ...]] = None
-    sizes: Optional[tuple[float | None, ...]] = None
-    labels: Optional[dict] = (
-        None  # { show_value?, show_category_name?, show_series_name?, show_percentage?, position?, number_format? }
-    )
-
-
-class ChartPayload(_FrozenModel):
-    type: str
-    subtype: Optional[str] = None
-    categories: tuple[str | float, ...] = ()
-    series: tuple[ChartSeriesModel, ...] = ()
-    plot_area: Optional[dict] = None  # { has_data_labels?, has_legend?, legend_pos? }
-    axes: Optional[dict] = None
-    style: Optional[int] = None
-    snapshot: Optional[Media] = None
-
-
-class ChartShape(ShapeBase):
-    kind: Literal[ShapeKind.CHART]
-    chart: ChartPayload
 
 
 class StrokeSpec(_FrozenModel):
@@ -156,6 +141,99 @@ class FillSpec(_FrozenModel):
 class BasicStyle(_FrozenModel):
     fill: Optional[FillSpec] = None
     stroke: Optional[StrokeSpec] = None
+
+
+class CellBorders(_DictLikeFrozenModel):
+    left: Optional[StrokeSpec] = None
+    right: Optional[StrokeSpec] = None
+    top: Optional[StrokeSpec] = None
+    bottom: Optional[StrokeSpec] = None
+
+
+class TableCell(_FrozenModel):
+    r: int
+    c: int
+    rowspan: int = 1
+    colspan: int = 1
+    text: TextPayload = Field(default_factory=TextPayload)
+    fill: Optional[Color] = None
+    borders: Optional[CellBorders] = None
+
+
+class TablePayload(_FrozenModel):
+    rows: int
+    cols: int
+    cells: tuple[TableCell, ...] = ()
+    header_row: Optional[bool] = None
+
+
+class TableShape(ShapeBase):
+    kind: Literal[ShapeKind.TABLE]
+    table: TablePayload
+
+
+class ChartDataPoint(_DictLikeFrozenModel):
+    idx: int
+    color: Optional[Color] = None
+    label: Optional[str] = None
+
+
+class ChartDataLabelOptions(_DictLikeFrozenModel):
+    show_value: Optional[bool] = None
+    show_category_name: Optional[bool] = None
+    show_series_name: Optional[bool] = None
+    show_percentage: Optional[bool] = None
+    position: Optional[str] = None
+    number_format: Optional[str] = None
+
+
+class ChartSeriesModel(_FrozenModel):
+    name: Optional[str] = None
+    values: tuple[float | None, ...] = ()
+    color: Optional[Color] = None
+    points: Optional[tuple[ChartDataPoint, ...]] = None
+    x_values: Optional[tuple[float | None, ...]] = None
+    sizes: Optional[tuple[float | None, ...]] = None
+    labels: Optional[ChartDataLabelOptions] = None
+
+
+class PlotAreaSpec(_DictLikeFrozenModel):
+    has_data_labels: Optional[bool] = None
+    has_legend: Optional[bool] = None
+    legend_pos: Optional[Literal["right", "left", "top", "bottom"]] = None
+
+
+class CategoryAxis(_DictLikeFrozenModel):
+    title: Optional[str] = None
+
+
+class ValueAxis(_DictLikeFrozenModel):
+    title: Optional[str] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+    major_unit: Optional[float] = None
+    format_code: Optional[str] = None
+
+
+class ChartAxes(_DictLikeFrozenModel):
+    category: Optional[CategoryAxis] = None
+    value: Optional[ValueAxis] = None
+
+
+class ChartPayload(_FrozenModel):
+    type: str
+    subtype: Optional[str] = None
+    categories: tuple[str | float, ...] = ()
+    series: tuple[ChartSeriesModel, ...] = ()
+    plot_area: Optional[PlotAreaSpec] = None
+    axes: Optional[ChartAxes] = None
+    style: Optional[int] = None
+    snapshot: Optional[Media] = None
+
+
+class ChartShape(ShapeBase):
+    kind: Literal[ShapeKind.CHART]
+    chart: ChartPayload
 
 
 class BasicShape(ShapeBase):
@@ -185,11 +263,16 @@ class SlideSize(_FrozenModel):
     height_px: Optional[int] = None
 
 
+class SlideBackground(_DictLikeFrozenModel):
+    color: Optional[Color] = None
+    image: Optional[Media] = None
+
+
 class SlideModel(_FrozenModel):
     index: int
     size: SlideSize
     shapes: tuple[Shape, ...] = ()
-    background: Optional[dict] = None
+    background: Optional[SlideBackground] = None
 
 
 class SlideDoc(_FrozenModel):

@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from typing import Any, Mapping
 
 from deckdown.models import Deck, Slide, Table
+from deckdown.ast import SlideDoc
 
 __all__ = ["MarkdownRenderer"]
 
@@ -13,7 +15,11 @@ __all__ = ["MarkdownRenderer"]
 class MarkdownRenderer:
     indent_unit: str = "  "  # two spaces per level
 
-    def render(self, deck: Deck, ast_per_slide: dict[int, dict] | None = None) -> str:
+    def render(
+        self,
+        deck: Deck,
+        ast_per_slide: Mapping[int, SlideDoc | Mapping[str, Any]] | None = None,
+    ) -> str:
         lines: list[str] = []
         heading = self._basename(deck.file) or deck.title or "Untitled Deck"
         lines.append(f"# {heading}")
@@ -135,5 +141,12 @@ class MarkdownRenderer:
         return base[:-5] if base.lower().endswith(".pptx") else base
 
     @staticmethod
-    def _dump_json(obj: dict) -> str:
+    def _dump_json(obj: SlideDoc | Mapping[str, Any]) -> str:
+        if isinstance(obj, SlideDoc):
+            return obj.model_dump_json(indent=2, ensure_ascii=False)
+
+        model_dump = getattr(obj, "model_dump_json", None)
+        if callable(model_dump):
+            return model_dump(indent=2, ensure_ascii=False)
+
         return json.dumps(obj, ensure_ascii=False, indent=2, sort_keys=False)
