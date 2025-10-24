@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterable
 
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 
@@ -15,6 +15,7 @@ from deckdown.extractors.handlers.basic_line_handler import BasicShapeHandler, L
 from deckdown.extractors.handlers.text_handler import TextShapeHandler
 from deckdown.extractors.group import GroupExtractor
 from deckdown.color.theme import ThemeResolver
+from deckdown.media import AssetStore, MediaEmbedMode
 
 
 @dataclass(frozen=True)
@@ -25,9 +26,17 @@ class AstExtractor:
     per-shape logic to keep this extractor small and readable.
     """
 
+    media_mode: MediaEmbedMode = "base64"
+    asset_store: AssetStore | None = None
+
     def extract(self, prs: Any) -> dict[int, SlideDoc]:  # noqa: ANN401
         size = SlideSize(width_emu=int(prs.slide_width), height_emu=int(prs.slide_height))
-        ctx = ExtractContext(size=size, theme=ThemeResolver.from_presentation(prs))
+        ctx = ExtractContext(
+            size=size,
+            theme=ThemeResolver.from_presentation(prs),
+            media_mode=self.media_mode,
+            asset_store=self.asset_store,
+        )
 
         handlers: tuple[ShapeHandler, ...] = (
             TableShapeHandler(),
@@ -38,23 +47,47 @@ class AstExtractor:
             TextShapeHandler(),
         )
         group_extractor = GroupExtractor(handlers=handlers)
+        walker = SlideWalker(handlers=handlers, group_extractor=group_extractor)
 
         out: dict[int, SlideDoc] = {}
         for idx, slide in enumerate(prs.slides, start=1):
-            built: list[Shape] = []
-            z = 0
-            for shp in slide.shapes:
-                if getattr(shp, "shape_type", None) == MSO_SHAPE_TYPE.GROUP:
-                    children, z, group_shape = group_extractor.extract(shp, z_start=z, ctx=ctx)
-                    built.append(group_shape)
-                    built.extend(children)
-                    continue
-                for h in handlers:
-                    if h.supports(shp):
-                        shape_obj = h.build(shp, z=z, ctx=ctx)
-                        if shape_obj is not None:
-                            built.append(shape_obj)
-                        z += 1
-                        break
-            out[idx] = SlideDoc(slide=SlideModel(index=idx, size=size, shapes=tuple(built)))
+            walked = walker.walk(slide.shapes, ctx=ctx)
+            out[idx] = SlideDoc(slide=SlideModel(index=idx, size=size, shapes=tuple(walked)))
         return out
+
+
+@dataclass(frozen=True)
+class SlideWalker:
+    handlers: tuple[ShapeHandler, ...]
+    group_extractor: GroupExtractor
+
+    def walk(self, shapes: Iterable[Any], *, ctx: ExtractContext) -> list[Shape]:  # noqa: ANN401
+        built: list[Shape] = []
+        z = 0
+        for shp in shapes:
+            z = self._dispatch(shp, current_z=z, ctx=ctx, out=built)
+        return built
+
+    def _dispatch(
+        self,
+        shp: Any,  # noqa: ANN401
+        *,
+        current_z: int,
+        ctx: ExtractContext,
+        out: list[Shape],
+    ) -> int:
+        if getattr(shp, "shape_type", None) == MSO_SHAPE_TYPE.GROUP:
+            children, next_z, group_shape = self.group_extractor.extract(shp, z_start=current_z, ctx=ctx)
+            out.append(group_shape)
+            out.extend(children)
+            return next_z
+
+        for handler in self.handlers:
+            if not handler.supports(shp):
+                continue
+            built = handler.build(shp, z=current_z, ctx=ctx)
+            if built is not None:
+                out.append(built)
+            return current_z + 1
+
+        return current_z
