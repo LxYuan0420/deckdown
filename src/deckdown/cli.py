@@ -9,6 +9,7 @@ from pathlib import Path
 from deckdown.extractors.text import TextExtractor
 from deckdown.io import OutputManager
 from deckdown.loader import Loader
+from deckdown.media import AssetStore, MediaEmbedMode
 from deckdown.renderers.markdown import MarkdownRenderer
 from deckdown.extractors.ast import AstExtractor
 from deckdown.validate import MarkdownValidator
@@ -65,6 +66,13 @@ def build_parser() -> argparse.ArgumentParser:
         default="info",
         help="Logging level for extraction diagnostics (default: info)",
     )
+    p_extract.add_argument(
+        "--embed-media",
+        dest="embed_media",
+        choices=["base64", "refs"],
+        default="base64",
+        help="Picture media embedding strategy (default: base64)",
+    )
 
     p_validate = sub.add_parser(
         "validate",
@@ -119,13 +127,15 @@ def _cmd_extract(args: argparse.Namespace) -> int:
 
     output = OutputManager()
     output_path = output.resolve_markdown_output_path(in_path, args.md_out)
+    media_mode: MediaEmbedMode = getattr(args, "embed_media", "base64")
+    asset_store = AssetStore(output_path) if media_mode == "refs" else None
 
     prs = Loader(str(in_path)).presentation()
     extractor = TextExtractor(with_notes=bool(args.with_notes))
     deck = extractor.extract_deck(prs, source_path=str(in_path))
 
     # Build AST per slide (authoritative positional data)
-    ast_docs = AstExtractor().extract(prs)
+    ast_docs = AstExtractor(media_mode=media_mode, asset_store=asset_store).extract(prs)
     # Convert SlideDoc models to plain dicts for JSON dump
     ast_dicts = {i: doc.model_dump(mode="python") for i, doc in ast_docs.items()}
     # Tiny diagnostics
@@ -135,7 +145,10 @@ def _cmd_extract(args: argparse.Namespace) -> int:
             shape_counts[sh.kind.value] = shape_counts.get(sh.kind.value, 0) + 1
     logging.info("extracted %d slides; shapes=%s", len(ast_docs), shape_counts)
 
-    markdown_text = MarkdownRenderer().render(deck, ast_per_slide=ast_dicts)
+    markdown_text = MarkdownRenderer().render(
+        deck,
+        ast_per_slide=ast_dicts,
+    )
 
     output.write_text_file(output_path, markdown_text)
     return EXIT_OK
