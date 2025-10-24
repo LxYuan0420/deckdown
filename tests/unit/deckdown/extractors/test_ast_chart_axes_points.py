@@ -57,16 +57,18 @@ def test_chart_axes_points_extraction(tmp_path: Path) -> None:
     docs = AstExtractor().extract(prs)
     # Slide 1 axes
     ch = [s for s in docs[1].slide.shapes if getattr(s, "kind", None).value == "chart"][0]
-    ax = ch.chart.axes or {}
-    assert ax.get("category", {}).get("title") == "Cats"
-    v = ax.get("value", {})
-    assert v.get("title") == "Values"
-    assert v.get("min") == 0.0 and v.get("max") == 10.0 and v.get("major_unit") == 2.0
-    assert v.get("format_code") == "0.0"
+    ax = ch.chart.axes
+    assert ax is not None
+    assert ax.category is not None and ax.category.title == "Cats"
+    v = ax.value
+    assert v is not None
+    assert v.title == "Values"
+    assert v.min == 0.0 and v.max == 10.0 and v.major_unit == 2.0
+    assert v.format_code == "0.0"
     # Slide 2 points
     ch2 = [s for s in docs[2].slide.shapes if getattr(s, "kind", None).value == "chart"][0]
     s0 = ch2.chart.series[0]
     pts = s0.points or ()
     assert len(pts) >= 3
-    colors = [pts[i]["color"]["resolved_rgb"] for i in range(3)]
+    colors = [pts[i].color.resolved_rgb for i in range(3) if pts[i].color is not None]
     assert colors == ["#AA0000", "#00AA00", "#0000AA"]

@@ -46,9 +46,12 @@ def test_extract_xy_bubble(tmp_path: Path) -> None:
     assert ch1.chart.type in ("scatter", "xy_scatter", "unknown")
     ser = ch1.chart.series[0]
     assert ser.values and len(ser.values) == 3
+    assert ser.x_values and len(ser.x_values) == 3
 
     s2 = docs[2].slide
     ch2 = [sh for sh in s2.shapes if getattr(sh, "kind", None).value == "chart"][0]
     assert ch2.chart.type in ("bubble", "unknown")
     ser2 = ch2.chart.series[0]
     assert ser2.values and len(ser2.values) == 3
+    assert ser2.x_values and len(ser2.x_values) == 3
+    assert ser2.sizes and len(ser2.sizes) == 3

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from deckdown.ast import ChartSeriesModel, PlotAreaSpec
 from deckdown.extractors.ast import AstExtractor
 from deckdown.loader import Loader
 
@@ -37,5 +38,11 @@ def test_ast_charts_basic(tmp_path: Path) -> None:
     assert ch.type in ("column", "bar", "line", "pie", "donut", "unknown")
     assert tuple(ch.categories) == ("A", "B", "C")
     assert len(ch.series) == 2
+    assert all(isinstance(s, ChartSeriesModel) for s in ch.series)
     assert tuple(ch.series[0].values) == (1, 2, 3)
     assert tuple(ch.series[1].values) == (4, 5, 6)
+    if ch.plot_area:
+        assert isinstance(ch.plot_area, PlotAreaSpec)
+        assert isinstance(ch.plot_area.has_legend, bool)
+        if ch.plot_area.has_legend:
+            assert ch.plot_area.legend_pos in {None, "right", "left", "top", "bottom"}
