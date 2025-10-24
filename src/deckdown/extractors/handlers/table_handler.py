@@ -17,6 +17,19 @@ class TableShapeHandler(ShapeHandler):
             getattr(shape, "has_table", False)
         )
 
+    def _cell_fill(self, cell: Any, ctx: ExtractContext) -> dict | None:  # noqa: ANN401
+        try:
+            fill = getattr(cell, "fill", None)
+            if fill is None:
+                return None
+            fore = getattr(fill, "fore_color", None)
+            if fore is None:
+                return None
+            data = ctx.theme.color_dict_from_colorformat(fore)
+            return data
+        except Exception:
+            return None
+
     def build(self, shape: Any, *, z: int, ctx: ExtractContext) -> Optional[TableShape]:  # noqa: ANN401
         bbox = ctx.bbox_for_shape(shape)
         tbl = shape.table
@@ -64,9 +77,18 @@ class TableShapeHandler(ShapeHandler):
                             continue
                         visited.add((rr, cc))
                 text: TextPayload = extract_text_payload(tbl.cell(r, c).text_frame, ctx.theme)
-                out_cells.append(TableCell(r=r, c=c, rowspan=rowspan, colspan=colspan, text=text))
+                fill = self._cell_fill(tbl.cell(r, c), ctx)
+                out_cells.append(
+                    TableCell(r=r, c=c, rowspan=rowspan, colspan=colspan, text=text, fill=fill)
+                )
 
-        payload = TablePayload(rows=n_rows, cols=n_cols, cells=tuple(out_cells))
+        header_row = bool(getattr(tbl, "first_row", False))
+        payload = TablePayload(
+            rows=n_rows,
+            cols=n_cols,
+            cells=tuple(out_cells),
+            header_row=header_row if header_row else None,
+        )
         return TableShape(
             id=f"s{getattr(shape, 'shape_id', z)}",
             kind=ShapeKind.TABLE,

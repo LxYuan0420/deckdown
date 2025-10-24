@@ -8,6 +8,7 @@ from deckdown.loader import Loader
 
 def _make_table_deck(tmp: Path) -> Path:
     from pptx import Presentation
+    from pptx.dml.color import RGBColor
 
     p = tmp / "tab.pptx"
     prs = Presentation()
@@ -22,11 +23,18 @@ def _make_table_deck(tmp: Path) -> Path:
     tbl.cell(0, 1).text = "H2"
     tbl.cell(1, 0).text = "A1"
     tbl.cell(1, 1).text = "B1"
+    tbl.first_row = True
+    # Apply fill to header cells
+    tbl.cell(0, 0).fill.solid()
+    tbl.cell(0, 0).fill.fore_color.rgb = RGBColor(0xFF, 0x00, 0x00)
+    tbl.cell(0, 1).fill.solid()
+    tbl.cell(0, 1).fill.fore_color.rgb = RGBColor(0x00, 0x80, 0x00)
 
     # Add another slide with vertical merge
     s2 = prs.slides.add_slide(blank)
     tbl_shape2 = s2.shapes.add_table(3, 2, left, top, width, height)
     tbl2 = tbl_shape2.table
+    tbl2.first_row = False
     tbl2.cell(0, 0).text = "X"
     tbl2.cell(1, 0).text = "X2"
     tbl2.cell(2, 0).text = "X3"
@@ -53,12 +61,21 @@ def test_ast_tables(tmp_path: Path) -> None:
     assert t.table.rows == 2 and t.table.cols == 2
     assert len(t.table.cells) == 4
     assert all(c.rowspan == 1 and c.colspan == 1 for c in t.table.cells)
+    assert t.table.header_row is True
+    header_cells = {(c.r, c.c): c for c in t.table.cells if c.r == 0}
+    assert header_cells[(0, 0)].fill is not None
+    assert header_cells[(0, 0)].fill.resolved_rgb == "#FF0000"
+    assert header_cells[(0, 1)].fill is not None
+    assert header_cells[(0, 1)].fill.resolved_rgb == "#008000"
+    body_cells = [c for c in t.table.cells if c.r > 0]
+    assert all(c.fill is None for c in body_cells)
 
     # Slide 2: vertical merge in col 0 spanning 3 rows → expect 3*2 - (3-1) = 4 cells emitted
     s2 = docs[2].slide
     tbl2 = [sh for sh in s2.shapes if getattr(sh, "kind", None).value == "table"][0]
     assert tbl2.table.rows == 3 and tbl2.table.cols == 2
     assert len(tbl2.table.cells) == 4
+    assert tbl2.table.header_row is None
     # The top-left cell should have rowspan >= 2
     top_left = next(c for c in tbl2.table.cells if c.r == 0 and c.c == 0)
     assert top_left.rowspan >= 2
