@@ -194,7 +194,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"error: input markdown not found: {in_path}", file=sys.stderr)
             return EXIT_INPUT_ERROR
         docs = MarkdownReader().load_file(in_path)
-        html = HtmlPreviewRenderer().render_deck(docs)
+        html = HtmlPreviewRenderer().render_deck(docs, asset_root=in_path.parent)
         out_path.write_text(html, encoding="utf-8")
         return EXIT_OK
     if ns.command == "schema":

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import html
+import mimetypes
 from dataclasses import dataclass
+from pathlib import Path
 
-from deckdown.ast import SlideDoc
+from deckdown.ast import Media, SlideDoc
 
 
 EMU_PER_INCH = 914400
@@ -16,7 +19,7 @@ def emu_to_px(v_emu: int) -> int:
 
 @dataclass(frozen=True)
 class HtmlPreviewRenderer:
-    def render_slide(self, doc: SlideDoc) -> str:  # noqa: C901
+    def render_slide(self, doc: SlideDoc, asset_root: Path | None = None) -> str:  # noqa: C901
         s = doc.slide
         wpx = emu_to_px(s.size.width_emu)
         hpx = emu_to_px(s.size.height_emu)
@@ -38,13 +41,16 @@ class HtmlPreviewRenderer:
                     "overflow:hidden;"
                 )
                 out.append(f'<div class="text" style="{text_style}">{html.escape(text)}</div>')
-            elif sh.kind.value == "picture" and sh.image.media and sh.image.media.data_url:
+            elif sh.kind.value == "picture" and sh.image.media:
+                data_url = self._media_data_url(sh.image.media, asset_root)
+                if not data_url:
+                    continue
                 pic_style = (
                     f"position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px;"
                     "object-fit:contain;"
                 )
                 out.append(
-                    f'<img class="pic" src="{sh.image.media.data_url}" style="{pic_style}" />'
+                    f'<img class="pic" src="{data_url}" style="{pic_style}" />'
                 )
             elif sh.kind.value == "shape_basic":
                 shape_style = (
@@ -90,8 +96,8 @@ class HtmlPreviewRenderer:
         out.append("</div>")
         return "\n".join(out)
 
-    def render_deck(self, docs: list[SlideDoc]) -> str:
-        body = "\n".join(self.render_slide(d) for d in docs)
+    def render_deck(self, docs: list[SlideDoc], asset_root: Path | None = None) -> str:
+        body = "\n".join(self.render_slide(d, asset_root=asset_root) for d in docs)
         return f"""
 <!doctype html>
 <meta charset="utf-8" />
@@ -107,3 +113,20 @@ class HtmlPreviewRenderer:
 {body}
 </div>
 """.strip()
+
+    def _media_data_url(self, media: Media, asset_root: Path | None) -> str | None:
+        if media.data_url:
+            return media.data_url
+        if not media.ref or asset_root is None:
+            return None
+        ref_path = (asset_root / media.ref).resolve()
+        if not ref_path.exists():
+            return None
+        mime, _ = mimetypes.guess_type(ref_path.name)
+        mime = mime or "application/octet-stream"
+        try:
+            data = ref_path.read_bytes()
+        except Exception:
+            return None
+        b64 = base64.b64encode(data).decode("ascii")
+        return f"data:{mime};base64,{b64}"
